@@ -9,7 +9,7 @@ import com.google.gson.annotations.SerializedName;
  */
 public class Basic {
     @SerializedName("city")
-    public String city; //城市
+    public String cityName; //城市
 
     @SerializedName("cnty")
     public String cnty;//国家
