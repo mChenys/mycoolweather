@@ -15,6 +15,12 @@ public class Suggestion {
 
     public Sport sport;//较适宜,天气较好，但考虑气温较低，推荐您进行室内运动，若户外适当增减衣物并注意防晒。
 
+    @SerializedName("flu")
+    public Health health;
+
+    @SerializedName("drsg")
+    public Dress dress;
+
     public class Comfort{
         @SerializedName("txt")
         public String info;
@@ -26,6 +32,16 @@ public class Suggestion {
     }
 
     public class Sport{
+        @SerializedName("txt")
+        public String info;
+    }
+
+    public class Health{
+        @SerializedName("txt")
+        public String info;
+    }
+
+    public class Dress{
         @SerializedName("txt")
         public String info;
     }

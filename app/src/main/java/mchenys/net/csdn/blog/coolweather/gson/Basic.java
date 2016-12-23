@@ -15,7 +15,7 @@ public class Basic {
     public String cnty;//国家
 
     @SerializedName("id")
-    public String id;//城市id
+    public String weatherId;//天气id
 
     public Update update;
 

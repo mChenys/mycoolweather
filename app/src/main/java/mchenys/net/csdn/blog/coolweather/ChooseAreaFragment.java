@@ -76,10 +76,19 @@ public class ChooseAreaFragment extends Fragment {
                     queryCounties();
                 } else if (currentLevel == LEVEL_COUNTY) {
                     String weatherId = mCountyList.get(position).getWeatherId();
-                    Intent intent = new Intent(getActivity(), WeatherActivity.class);
-                    intent.putExtra("weather_id", weatherId);
-                    startActivity(intent);
-                    getActivity().finish();
+                    if (getActivity() instanceof MainActivity) {
+                        //当前切换城市是在MainActivity中
+                        Intent intent = new Intent(getActivity(), WeatherActivity.class);
+                        intent.putExtra("weather_id", weatherId);
+                        startActivity(intent);
+                        getActivity().finish();
+                    } else if (getActivity() instanceof WeatherActivity) {
+                        //当前切换城市是在WeatherActivity的侧滑菜单中
+                        WeatherActivity activity = (WeatherActivity) getActivity();
+                        activity.setWeatherId(weatherId);
+                        activity.closeDrawerLayout();
+                    }
+
                 }
             }
         });

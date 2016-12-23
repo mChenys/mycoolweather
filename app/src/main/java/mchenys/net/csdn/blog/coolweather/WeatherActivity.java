@@ -6,8 +6,12 @@ import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
+import android.support.v4.view.GravityCompat;
+import android.support.v4.widget.DrawerLayout;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -41,26 +45,31 @@ public class WeatherActivity extends AppCompatActivity {
     private TextView comfortText;
     private TextView carWashText;
     private TextView sportText;
+    private TextView healthText;
+    private TextView dressText;
     private ImageView bingPicImg;
+    private SwipeRefreshLayout refreshLayout;
+    private DrawerLayout drawerLayout;
+    private Button navButton;
+
+    private String weatherId;//天气id
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setStateBarranTsparent();
-        initView();
-        initData();
-
-    }
-
-    private void setStateBarranTsparent() {
         if (Build.VERSION.SDK_INT >= 21) {
             View decorView = getWindow().getDecorView();
             decorView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
                     | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
             getWindow().setStatusBarColor(Color.TRANSPARENT);
-            setContentView(R.layout.activity_weather);
+
         }
+        setContentView(R.layout.activity_weather);
+        initView();
+        initData();
+        initListener();
     }
+
 
     private void initView() {
         weatherLayout = (ScrollView) findViewById(R.id.sv_weather);
@@ -74,21 +83,30 @@ public class WeatherActivity extends AppCompatActivity {
         comfortText = (TextView) findViewById(R.id.tv_comfort);
         carWashText = (TextView) findViewById(R.id.tv_car_wash);
         sportText = (TextView) findViewById(R.id.tv_sport_text);
+        healthText = (TextView) findViewById(R.id.tv_health_text);
+        dressText = (TextView) findViewById(R.id.tv_dress_text);
         bingPicImg = (ImageView) findViewById(R.id.bing_pic_img);
+        refreshLayout = (SwipeRefreshLayout) findViewById(R.id.swipe_refresh);
+        refreshLayout.setColorSchemeResources(R.color.colorPrimary);
+        drawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
+        navButton = (Button) findViewById(R.id.btn_nav);
+
     }
 
     private void initData() {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         String weatherString = prefs.getString("weather", null);
+
         if (null != weatherString) {
             //有缓存直接解析天气数据
             Weather weather = Utility.handleWeatherResponse(weatherString);
+            weatherId = weather.basic.weatherId;
             showWeatherInfo(weather);
         } else {
             //无缓存时去服务器查询天气
-            String weatherId = getIntent().getStringExtra("weather_id");
+            weatherId = getIntent().getStringExtra("weather_id");
             weatherLayout.setVisibility(View.INVISIBLE);
-            requestWeather(weatherId);
+            requestWeather();
         }
         String bingPic = prefs.getString("bing_pic", null);
         if (null != bingPic) {
@@ -96,6 +114,21 @@ public class WeatherActivity extends AppCompatActivity {
         } else {
             loadBingPic();
         }
+    }
+
+    private void initListener() {
+        refreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                requestWeather();
+            }
+        });
+        navButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                drawerLayout.openDrawer(GravityCompat.START);
+            }
+        });
     }
 
     private void loadBingPic() {
@@ -124,10 +157,8 @@ public class WeatherActivity extends AppCompatActivity {
 
     /**
      * 根据城市Id请求城市天气信息
-     *
-     * @param weatherId
      */
-    private void requestWeather(final String weatherId) {
+    private void requestWeather() {
         String weatherUrl = "http://guolin.tech/api/weather?cityid=" + weatherId + "&key=b7957d1187704a53a3f21dfdb33a7458";
         HttpUtil.sendOkHttpRequest(weatherUrl, new Callback() {
             @Override
@@ -136,6 +167,7 @@ public class WeatherActivity extends AppCompatActivity {
                     @Override
                     public void run() {
                         Toast.makeText(WeatherActivity.this, "获取天气信息失败", Toast.LENGTH_SHORT).show();
+                        refreshLayout.setRefreshing(false);
                     }
                 });
             }
@@ -155,6 +187,7 @@ public class WeatherActivity extends AppCompatActivity {
                         } else {
                             Toast.makeText(WeatherActivity.this, "获取天气信息失败", Toast.LENGTH_SHORT).show();
                         }
+                        refreshLayout.setRefreshing(false);
                     }
                 });
 
@@ -200,13 +233,25 @@ public class WeatherActivity extends AppCompatActivity {
         String comfort = "舒适度:" + weather.suggestion.comfort.info;
         String carWash = "洗车指数:" + weather.suggestion.carwash.info;
         String sport = "运动建议:" + weather.suggestion.sport.info;
+        String health = "健康卫士:" + weather.suggestion.health.info;
+        String dress = "衣着建议:" + weather.suggestion.dress.info;
 
         comfortText.setText(comfort);
         carWashText.setText(carWash);
         sportText.setText(sport);
+        healthText.setText(health);
+        dressText.setText(dress);
 
         weatherLayout.setVisibility(View.VISIBLE);
     }
 
+    public void closeDrawerLayout() {
+        drawerLayout.closeDrawers();
+        refreshLayout.setRefreshing(true);
+        requestWeather();
+    }
 
+    public void setWeatherId(String weatherId) {
+        this.weatherId = weatherId;
+    }
 }
