@@ -13,11 +13,11 @@ android {
     }
     signingConfigs {
         config {
-            //以下KEY_PATH,STORE_PASS,ALIAS_NAME,KEY_PASS 都配置在gradle.properties文件中
-            storeFile file(KEY_PATH)
-            storePassword STORE_PASS
-            keyAlias ALIAS_NAME
-            keyPassword KEY_PASS
+            //以下KEY_PATH,STORE_PASS,ALIAS_NAME,KEY_PASS 都可以配置在gradle.properties文件中
+            storeFile file("./mChenys.jks")
+            storePassword "1234567"
+            keyAlias "mChenysDev"
+            keyPassword "1234567"
         }
     }
     buildTypes {
@@ -31,6 +31,13 @@ android {
         }
     }
     productFlavors {
+        //渠道包的闭包中可以覆盖defaultConfig中的所有配置
+        qihoo {
+            applicationId "mchenys.net.csdn.blog.coolweather.qihoo"
+        }
+        baidu {
+            applicationId "mchenys.net.csdn.blog.coolweather.baidu"
+        }
     }
 }
 
