@@ -1,26 +1,41 @@
 apply plugin: 'com.android.application'
 
+
 android {
     compileSdkVersion 24
     buildToolsVersion "25.0.0"
-
     defaultConfig {
         applicationId "mchenys.net.csdn.blog.coolweather"
-        minSdkVersion 15
+        minSdkVersion 16
         targetSdkVersion 24
         versionCode 1
         versionName "1.0"
+    }
+    signingConfigs {
+        config {
+            //以下KEY_PATH,STORE_PASS,ALIAS_NAME,KEY_PASS 都配置在gradle.properties文件中
+            storeFile file(KEY_PATH)
+            storePassword STORE_PASS
+            keyAlias ALIAS_NAME
+            keyPassword KEY_PASS
+        }
     }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.config
         }
+        debug {
+            signingConfig signingConfigs.config
+        }
+    }
+    productFlavors {
     }
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile fileTree(include: ['*.jar'], dir: 'libs')
     testCompile 'junit:junit:4.12'
     compile 'com.android.support:appcompat-v7:24.2.1'
     compile 'org.litepal.android:core:1.3.2'
