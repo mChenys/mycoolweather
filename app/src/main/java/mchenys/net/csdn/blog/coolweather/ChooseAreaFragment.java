@@ -5,6 +5,8 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.text.TextUtils;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -34,6 +36,7 @@ import okhttp3.Response;
  * Created by mChenys on 2016/12/19.
  */
 public class ChooseAreaFragment extends Fragment {
+    private static final String TAG = "ChooseAreaFragment";
     public static int LEVEL_PROVINCE = 0;
     public static int LEVEL_CITY = 1;
     public static int LEVEL_COUNTY = 2;
@@ -105,6 +108,7 @@ public class ChooseAreaFragment extends Fragment {
         });
         queryProvinces();
     }
+
     //查询所有省
     private void queryProvinces() {
         mTitleTv.setText("中国");
@@ -120,9 +124,10 @@ public class ChooseAreaFragment extends Fragment {
             currentLevel = LEVEL_PROVINCE;
         } else {
             String address = "http://guolin.tech/api/china";
-            queryFromServer(address, "province");
+            asyncQueryFromServer(address, "province");
         }
     }
+
     //查询选中省内的所有市
     private void queryCities() {
         mTitleTv.setText(mSelectedProvince.getProvinceName());
@@ -139,7 +144,7 @@ public class ChooseAreaFragment extends Fragment {
         } else {
             int provinceCode = mSelectedProvince.getProvinceCode();
             String address = "http://guolin.tech/api/china/" + provinceCode;
-            queryFromServer(address, "city");
+            asyncQueryFromServer(address, "city");
         }
     }
 
@@ -159,13 +164,18 @@ public class ChooseAreaFragment extends Fragment {
         } else {
             int provinceCode = mSelectedProvince.getProvinceCode();
             int cityCode = mSelectedCity.getCityCode();
-            String address = "http://guolin.tech/api/china/"+provinceCode+"/"+cityCode;
-            queryFromServer(address, "county");
+            String address = "http://guolin.tech/api/china/" + provinceCode + "/" + cityCode;
+            asyncQueryFromServer(address, "county");
         }
     }
 
-
-    private void queryFromServer(String address, final String type) {
+    /**
+     * 根据类型查找接口
+     *
+     * @param address
+     * @param type
+     */
+    private void asyncQueryFromServer(String address, final String type) {
         showProgressDialog();
         HttpUtil.sendOkHttpRequest(address, new Callback() {
             @Override
@@ -182,31 +192,49 @@ public class ChooseAreaFragment extends Fragment {
             @Override
             public void onResponse(Call call, Response response) throws IOException {
                 String responseText = response.body().string();
-                boolean result = false;
-                if ("province".equals(type)) {
-                    result = Utility.handleProvinceResponse(responseText);
-                } else if ("city".equals(type)) {
-                    result = Utility.handleCityResponse(responseText,mSelectedProvince.getId());
-                } else if ("county".equals(type)) {
-                    result = Utility.handleCountyResponse(responseText,mSelectedCity.getId());
-                }
-                if (result) {
-                    getActivity().runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            closeProvinceDialog();
-                            if ("province".equals(type)) {
-                                queryProvinces();
-                            } else if ("city".equals(type)) {
-                                queryCities();
-                            } else if ("county".equals(type)) {
-                                queryCounties();
-                            }
-                        }
-                    });
+                if (isHandleSuccess(responseText, type)) {
+                    doQueryByType(type);
                 }
             }
         });
+    }
+
+    private void doQueryByType(final String type) {
+        getActivity().runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                closeProvinceDialog();
+                switch (type) {
+                    case "province":
+                        queryProvinces();
+                        break;
+                    case "city":
+                        queryCities();
+                        break;
+                    case "county":
+                        queryCounties();
+                        break;
+                }
+            }
+        });
+    }
+
+    private boolean isHandleSuccess(String responseText, String type) {
+        boolean result = false;
+        switch (type) {
+            case "province":
+                result = Utility.handleProvinceResponse(responseText);
+                break;
+            case "city":
+                int provinceCode = mSelectedProvince == null ? this.provinceCode : mSelectedProvince.getId();
+                result = Utility.handleCityResponse(responseText, provinceCode);
+                break;
+            case "county":
+                int cityCode = mSelectedCity == null ? this.cityCode : mSelectedCity.getId();
+                result = Utility.handleCountyResponse(responseText, cityCode);
+                break;
+        }
+        return result;
     }
 
     private void closeProvinceDialog() {
@@ -222,5 +250,122 @@ public class ChooseAreaFragment extends Fragment {
             mProgressDialog.setCanceledOnTouchOutside(false);
         }
         mProgressDialog.show();
+    }
+
+    private int provinceCode, cityCode;
+    private String weatherId;
+    private String provinceName, cityName, countyName;
+
+    public void showWeatherByPosition(String province, String city, String county) {
+        showProgressDialog();
+        Log.d(TAG, "showWeatherByPosition->province:" + province + " city:" + city + " county:" + county);
+        if (TextUtils.isEmpty(province) || TextUtils.isEmpty(city) || TextUtils.isEmpty(county)) {
+            Toast.makeText(getActivity(), "定位信息获取失败", Toast.LENGTH_SHORT).show();
+            closeProvinceDialog();
+            return;
+        }
+        this.provinceName = province.replace("省", "");
+        this.cityName = city.replace("市", "");
+        this.countyName = county.replace("区", "").replace("县", "");
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    findProvinceCode();
+                    if (0 != provinceCode) {
+                        findCityCode();
+                    }
+                    if (0 != cityCode) {
+                        findWeatherId();
+                    }
+
+                    Log.d(TAG, "showWeatherByPosition->provinceCode:" + provinceCode + " cityCode:" + cityCode + " weatherId:" + weatherId);
+                    getActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            if (!TextUtils.isEmpty(weatherId)) {
+                                closeProvinceDialog();
+                                Intent intent = new Intent(getActivity(), WeatherActivity.class);
+                                intent.putExtra("weather_id", weatherId);
+                                startActivity(intent);
+                                getActivity().finish();
+                            }
+                        }
+                    });
+                } catch (Exception e) {
+                    getActivity().runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Toast.makeText(getActivity(), "定位信息获取失败", Toast.LENGTH_SHORT).show();
+                            closeProvinceDialog();
+                        }
+                    });
+                }
+
+            }
+        }).start();
+
+
+    }
+
+    private void findWeatherId() {
+        if (!TextUtils.isEmpty(countyName)) {
+            List<County> countyList = DataSupport.select("weatherId").where("countyName=?", countyName).find(County.class);
+            if (null != countyList && countyList.size() > 0) {
+                weatherId = countyList.get(0).getWeatherId();
+                return;
+            }
+            //进来说明找不到对应的county,那就用cityName查找,例如 广东/深圳/福田,而接口又没有福田,只能查上一级作为直接的县区了
+            countyList = DataSupport.select("weatherId").where("countyName=?", cityName).find(County.class);
+            if (null != countyList && countyList.size() > 0) {
+                weatherId = countyList.get(0).getWeatherId();
+                return;
+            } else {
+                String address = "http://guolin.tech/api/china/" + provinceCode + "/" + cityCode;
+                executeQueryFromServer(address, "county");
+            }
+        }
+    }
+
+    private void findCityCode() {
+        if (!TextUtils.isEmpty(cityName)) {
+            List<City> cityList = DataSupport.select("cityCode").where("cityName=?", cityName).find(City.class);
+            if (null != cityList && cityList.size() > 0) {
+                cityCode = cityList.get(0).getCityCode();
+            } else {
+                String address = "http://guolin.tech/api/china/" + provinceCode;
+                executeQueryFromServer(address, "city");
+            }
+        }
+    }
+
+    public void findProvinceCode() {
+        if (!TextUtils.isEmpty(provinceName)) {
+            List<Province> provinceList = DataSupport.select("provinceCode")
+                    .where("provinceName =?", provinceName).find(Province.class);
+            if (null != provinceList && provinceList.size() > 0) {
+                provinceCode = provinceList.get(0).getProvinceCode();
+            } else {
+                String address = "http://guolin.tech/api/china";
+                executeQueryFromServer(address, "province");
+            }
+        }
+    }
+
+    private void executeQueryFromServer(String address, String type) {
+        String responseText = HttpUtil.sendOkHttpRequest(address);
+        if (isHandleSuccess(responseText, type)) {
+            switch (type) {
+                case "province":
+                    findProvinceCode();
+                    break;
+                case "city":
+                    findCityCode();
+                    break;
+                case "county":
+                    findWeatherId();
+                    break;
+            }
+        }
     }
 }

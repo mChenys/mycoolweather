@@ -143,11 +143,16 @@ public class WeatherActivity extends AppCompatActivity {
             public boolean onMenuItemClick(MenuItem item) {
                 if (item.getItemId() == 0) {
                     showShareDialog();
+                } else if (item.getItemId() == 1) {
+                    showMyLocation();
                 }
                 return true;
             }
+
+
         });
     }
+
 
     private void initAutoUpdateService() {
         //开启自动更新服务
@@ -291,6 +296,7 @@ public class WeatherActivity extends AppCompatActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         menu.add(0, 0, 0, "短信分享");
+        menu.add(0, 1, 1, "我的位置");
         return true;
     }
 
@@ -377,6 +383,10 @@ public class WeatherActivity extends AppCompatActivity {
             WeatherActivity.this.unregisterReceiver(this);
         }
     };
+
+    private void showMyLocation() {
+        startActivity(new Intent(this, BDMapActivity.class));
+    }
 }
 
 
