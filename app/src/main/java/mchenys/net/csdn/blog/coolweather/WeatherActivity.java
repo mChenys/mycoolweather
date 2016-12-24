@@ -1,9 +1,9 @@
 package mchenys.net.csdn.blog.coolweather;
 
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Color;
-import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
@@ -11,8 +11,13 @@ import android.support.v4.view.GravityCompat;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.Toolbar;
+import android.telephony.SmsManager;
+import android.text.TextUtils;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -22,6 +27,7 @@ import android.widget.Toast;
 import com.bumptech.glide.Glide;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 import mchenys.net.csdn.blog.coolweather.gson.Forecast;
 import mchenys.net.csdn.blog.coolweather.gson.Weather;
@@ -33,6 +39,7 @@ import okhttp3.Callback;
 import okhttp3.Response;
 
 /**
+ * 天气界面
  * Created by mChenys on 2016/12/23.
  */
 public class WeatherActivity extends AppCompatActivity {
@@ -52,26 +59,18 @@ public class WeatherActivity extends AppCompatActivity {
     private ImageView bingPicImg;
     private SwipeRefreshLayout refreshLayout;
     private DrawerLayout drawerLayout;
-    private Button navButton;
-
+    private Toolbar toolBar;
     private String weatherId;//天气id
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        if (Build.VERSION.SDK_INT >= 21) {
-            View decorView = getWindow().getDecorView();
-            decorView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                    | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
-            getWindow().setStatusBarColor(Color.TRANSPARENT);
-
-        }
         setContentView(R.layout.activity_weather);
         initView();
         initData();
         initListener();
+        initAutoUpdateService();
     }
-
 
     private void initView() {
         weatherLayout = (ScrollView) findViewById(R.id.sv_weather);
@@ -91,8 +90,10 @@ public class WeatherActivity extends AppCompatActivity {
         refreshLayout = (SwipeRefreshLayout) findViewById(R.id.swipe_refresh);
         refreshLayout.setColorSchemeResources(R.color.colorPrimary);
         drawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
-        navButton = (Button) findViewById(R.id.btn_nav);
-
+        toolBar = (Toolbar) findViewById(R.id.toolbar);
+        toolBar.setTitle("");
+        toolBar.setNavigationIcon(R.drawable.ic_home);
+        setSupportActionBar(toolBar);
     }
 
     private void initData() {
@@ -126,12 +127,27 @@ public class WeatherActivity extends AppCompatActivity {
                 requestWeather();
             }
         });
-        navButton.setOnClickListener(new View.OnClickListener() {
+        toolBar.setNavigationOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 drawerLayout.openDrawer(GravityCompat.START);
             }
         });
+        toolBar.setOnMenuItemClickListener(new Toolbar.OnMenuItemClickListener() {
+            @Override
+            public boolean onMenuItemClick(MenuItem item) {
+                if (item.getItemId() == 0) {
+                    showShareDialog();
+                }
+                return true;
+            }
+        });
+    }
+    private void initAutoUpdateService() {
+        //开启自动更新服务
+        Intent intent = new Intent(this, AutoUpdateService.class);
+        intent.putExtra("isFirst", true);
+        startService(intent);
     }
 
     private void loadBingPic() {
@@ -225,8 +241,8 @@ public class WeatherActivity extends AppCompatActivity {
                 TextView minText = (TextView) view.findViewById(R.id.tv_min);
                 dateText.setText(forecast.date);
                 infoText.setText(forecast.more.info);
-                maxText.setText(forecast.temperature.max+"℃");
-                minText.setText(forecast.temperature.min+"℃");
+                maxText.setText(forecast.temperature.max + "℃");
+                minText.setText(forecast.temperature.min + "℃");
                 forecastLayout.addView(view);
             }
 
@@ -249,9 +265,7 @@ public class WeatherActivity extends AppCompatActivity {
 
             weatherLayout.setVisibility(View.VISIBLE);
 
-            //开启自动更新服务
-            Intent intent = new Intent(this, AutoUpdateService.class);
-            startService(intent);
+
         } else {
             Toast.makeText(WeatherActivity.this, "获取天气信息失败", Toast.LENGTH_SHORT).show();
         }
@@ -268,7 +282,69 @@ public class WeatherActivity extends AppCompatActivity {
         this.weatherId = weatherId;
     }
 
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        menu.add(0, 0, 0, "短信分享");
+        return true;
+    }
 
+
+    /**
+     * 弹出分享列表
+     */
+    private void showShareDialog() {
+
+        final EditText et = new EditText(this);
+
+        new AlertDialog.Builder(this).setTitle("输入手机号码")
+                .setIcon(android.R.drawable.ic_dialog_info)
+                .setView(et)
+                .setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        String input = et.getText().toString();
+                        if (TextUtils.isEmpty(input)) {
+                            Toast.makeText(getApplicationContext(), "手机号码不能为空！", Toast.LENGTH_LONG).show();
+                        } else {
+                            sendSMS(input);
+                        }
+                    }
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
+
+    /**
+     * 发短信
+     */
+    private void sendSMS(String phone) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(titleUpdateTime.getText()+" ");
+        sb.append(titleCity.getText());
+        sb.append(degreeText.getText()+" ");
+        sb.append(weatherInfoText.getText()+" ");
+        sb.append("临近3天天气情况:");
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        String weatherString = prefs.getString("weather", null);
+
+        if (null != weatherString) {
+            //有缓存直接解析天气数据
+            Weather weather = Utility.handleWeatherResponse(weatherString);
+            for (Forecast forecast : weather.forecastList) {
+                sb.append(forecast.date + " " + forecast.more.info + " 最低气温:" + forecast.temperature.min + "℃ 最高气温:" + forecast.temperature.max + "℃;");
+            }
+            sb.append(weather.suggestion.dress.info);
+        }
+        String message = sb.toString();
+        SmsManager smsManager = SmsManager.getDefault();
+        if (message.length() > 70) {
+            ArrayList<String> msgs = smsManager.divideMessage(message);
+            smsManager.sendMultipartTextMessage(phone, null, msgs, null, null);
+        } else {
+            smsManager.sendTextMessage(phone, null, message, null, null);
+        }
+
+    }
 }
 
 

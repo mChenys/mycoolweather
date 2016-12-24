@@ -2,6 +2,7 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
              android:layout_width="match_parent"
              android:layout_height="match_parent"
+             android:background="@color/colorPrimary"
     >
 
     <ImageView
@@ -10,41 +11,48 @@
         android:layout_height="match_parent"
         android:scaleType="centerCrop"/>
 
+
     <android.support.v4.widget.DrawerLayout
         android:id="@+id/drawer_layout"
         android:layout_width="match_parent"
         android:layout_height="match_parent">
         <!--主界面-->
-        <android.support.v4.widget.SwipeRefreshLayout
-            android:id="@+id/swipe_refresh"
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent">
+            android:layout_height="match_parent"
+            android:orientation="vertical">
 
-            <ScrollView
-                android:id="@+id/sv_weather"
+            <include layout="@layout/title"/>
+
+            <android.support.v4.widget.SwipeRefreshLayout
+                android:id="@+id/swipe_refresh"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:overScrollMode="never"
-                android:scrollbars="none">
+                android:layout_height="match_parent">
 
-                <LinearLayout
+                <ScrollView
+                    android:id="@+id/sv_weather"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:fitsSystemWindows="true"
-                    android:orientation="vertical">
+                    android:layout_height="match_parent"
+                    android:overScrollMode="never"
+                    android:scrollbars="none">
 
-                    <include layout="@layout/title"/>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:fitsSystemWindows="true"
+                        android:orientation="vertical">
 
-                    <include layout="@layout/now"/>
+                        <include layout="@layout/now"/>
 
-                    <include layout="@layout/forecast"/>
+                        <include layout="@layout/forecast"/>
 
-                    <include layout="@layout/aqi"/>
+                        <include layout="@layout/aqi"/>
 
-                    <include layout="@layout/suggestion"/>
-                </LinearLayout>
-            </ScrollView>
-        </android.support.v4.widget.SwipeRefreshLayout>
+                        <include layout="@layout/suggestion"/>
+                    </LinearLayout>
+                </ScrollView>
+            </android.support.v4.widget.SwipeRefreshLayout>
+        </LinearLayout>
         <!--左侧菜单界面-->
         <fragment
             android:id="@+id/choose_area_fragment"
@@ -53,5 +61,6 @@
             android:layout_height="match_parent"
             android:layout_gravity="start"/>
     </android.support.v4.widget.DrawerLayout>
+
 
 </FrameLayout>

@@ -29,8 +29,11 @@ public class AutoUpdateService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        updateWeather();
-        updateBingPic();
+        boolean isFirst = intent.getBooleanExtra("isFist", false);
+        if(!isFirst){
+            updateWeather();
+            updateBingPic();
+        }
         AlarmManager manager = (AlarmManager) getSystemService(ALARM_SERVICE);
         int an8Hour = 8 * 60 * 60 * 1000;
         long triggerAtTime = SystemClock.elapsedRealtime() + an8Hour;//从开机时间后8小时执行定时任务
