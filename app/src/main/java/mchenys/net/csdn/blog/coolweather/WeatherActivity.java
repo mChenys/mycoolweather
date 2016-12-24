@@ -1,8 +1,13 @@
 package mchenys.net.csdn.blog.coolweather;
 
+import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
@@ -143,6 +148,7 @@ public class WeatherActivity extends AppCompatActivity {
             }
         });
     }
+
     private void initAutoUpdateService() {
         //开启自动更新服务
         Intent intent = new Intent(this, AutoUpdateService.class);
@@ -313,16 +319,16 @@ public class WeatherActivity extends AppCompatActivity {
                 .show();
     }
 
-
     /**
      * 发短信
      */
     private void sendSMS(String phone) {
+        registerReceiver(mSmsSendBroadcastReceiver, new IntentFilter("SENT_SMS_ACTION"));
         StringBuilder sb = new StringBuilder();
-        sb.append(titleUpdateTime.getText()+" ");
+        sb.append(titleUpdateTime.getText() + " ");
         sb.append(titleCity.getText());
-        sb.append(degreeText.getText()+" ");
-        sb.append(weatherInfoText.getText()+" ");
+        sb.append(degreeText.getText() + " ");
+        sb.append(weatherInfoText.getText() + " ");
         sb.append("临近3天天气情况:");
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         String weatherString = prefs.getString("weather", null);
@@ -337,14 +343,40 @@ public class WeatherActivity extends AppCompatActivity {
         }
         String message = sb.toString();
         SmsManager smsManager = SmsManager.getDefault();
+        PendingIntent sentPI = PendingIntent.getBroadcast(this, 0, new Intent("SENT_SMS_ACTION"), 0);
+
         if (message.length() > 70) {
             ArrayList<String> msgs = smsManager.divideMessage(message);
-            smsManager.sendMultipartTextMessage(phone, null, msgs, null, null);
+            ArrayList<PendingIntent> sentIntents = new ArrayList<>();
+            for (int i = 0; i < msgs.size(); i++) {
+                sentIntents.add(sentPI);
+            }
+            smsManager.sendMultipartTextMessage(phone, null, msgs, sentIntents, null);
         } else {
-            smsManager.sendTextMessage(phone, null, message, null, null);
+            smsManager.sendTextMessage(phone, null, message, sentPI, null);
         }
-
     }
+
+    private BroadcastReceiver mSmsSendBroadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            switch (getResultCode()) {
+                case Activity.RESULT_OK:
+                    Toast.makeText(context, "信息已发出", Toast.LENGTH_LONG).show();
+                    break;
+                case SmsManager.RESULT_ERROR_GENERIC_FAILURE:
+                    Toast.makeText(context, "未指定失败 \n 信息未发出，请重试", Toast.LENGTH_LONG).show();
+                    break;
+                case SmsManager.RESULT_ERROR_RADIO_OFF:
+                    Toast.makeText(context, "无线连接关闭 \n 信息未发出，请重试", Toast.LENGTH_LONG).show();
+                    break;
+                case SmsManager.RESULT_ERROR_NULL_PDU:
+                    Toast.makeText(context, "PDU失败 \n 信息未发出，请重试", Toast.LENGTH_LONG).show();
+                    break;
+            }
+            WeatherActivity.this.unregisterReceiver(this);
+        }
+    };
 }
 
 
