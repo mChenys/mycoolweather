@@ -10,7 +10,7 @@
     </style>
 
     <style name="TranslucentTheme" parent="AppTheme"></style>
-
+    <!--避免overflow遮挡toolbar-->
     <style name="OverflowMenu" parent="Widget.AppCompat.PopupMenu.Overflow">
         <item name="overlapAnchor">false</item>
     </style>

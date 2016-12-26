@@ -3,6 +3,7 @@
               xmlns:app="http://schemas.android.com/apk/res-auto"
               android:layout_width="match_parent"
               android:layout_height="match_parent"
+              android:fitsSystemWindows="true"
               android:orientation="vertical">
 
     <android.support.v7.widget.Toolbar
@@ -11,17 +12,36 @@
         android:layout_height="?attr/actionBarSize"
         android:background="@color/colorPrimary"
         android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
-        app:title="我的位置"/>
+        app:popupTheme="@style/ToolbarPopupMenu"
+        app:title="我的位置">
 
-    <TextView
-        android:id="@+id/tv_position"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:visibility="gone"/>
+        <Button
+            android:id="@+id/btn_chg_marker"
+            android:layout_width="60dp"
+            android:layout_height="match_parent"
+            android:layout_gravity="right"
+            android:background="@null"
+            android:gravity="center"
+            android:text="普通"/>
+    </android.support.v7.widget.Toolbar>
 
-    <com.baidu.mapapi.map.MapView
-        android:id="@+id/bmapView"
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:clickable="true"/>
+        android:layout_height="match_parent">
+
+        <com.baidu.mapapi.map.MapView
+            android:id="@+id/bmapView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clickable="true"/>
+
+        <ImageButton
+            android:id="@+id/ib_route"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|right"
+            android:layout_marginBottom="60dp"
+            android:layout_marginRight="20dp"
+            android:background="@drawable/selector_route"/>
+    </FrameLayout>
 </LinearLayout>

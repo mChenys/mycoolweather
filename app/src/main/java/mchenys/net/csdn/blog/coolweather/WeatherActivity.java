@@ -34,6 +34,7 @@ import com.bumptech.glide.Glide;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import mchenys.net.csdn.blog.coolweather.baidu.BDMapActivity;
 import mchenys.net.csdn.blog.coolweather.gson.Forecast;
 import mchenys.net.csdn.blog.coolweather.gson.Weather;
 import mchenys.net.csdn.blog.coolweather.service.AutoUpdateService;

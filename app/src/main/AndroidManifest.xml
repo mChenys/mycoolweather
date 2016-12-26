@@ -17,7 +17,7 @@
 
 
     <application
-        android:name="org.litepal.LitePalApplication"
+        android:name=".WeatherApplication"
         android:allowBackup="true"
         android:icon="@mipmap/logo"
         android:label="@string/app_name"
@@ -28,14 +28,16 @@
             android:value="f3EsDEOFY6jVcni8HdoveWWnf5lqpmoM"/>
 
         <activity android:name=".MainActivity">
+
+        </activity>
+        <activity android:name=".WeatherActivity"/>
+        <activity android:name=".baidu.BDMapActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
 
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-        <activity android:name=".WeatherActivity"/>
-        <activity android:name=".BDMapActivity"/>
 
         <service android:name=".service.AutoUpdateService"/>
         <!--baidu-->
