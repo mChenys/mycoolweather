@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:app="http://schemas.android.com/apk/res-auto"
               android:layout_width="match_parent"
               android:layout_height="match_parent"
               android:fitsSystemWindows="true"
@@ -29,49 +30,55 @@
             android:textSize="18sp"/>
     </android.support.v7.widget.Toolbar>
 
-    <LinearLayout
+    <android.support.design.widget.TabLayout
+        android:id="@+id/tabLayout"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:background="@color/colorPrimary"
+        app:tabGravity="center"
+        app:tabIndicatorColor="#fff"
+        app:tabMode="fixed"
+        app:tabSelectedTextColor="#fff"
+        app:tabTextColor="#8fff"/>
+
+
+    <EditText
+        android:id="@+id/edt_start"
         android:layout_width="match_parent"
         android:layout_height="50dp"
-        android:background="@color/colorPrimary">
+        android:layout_marginLeft="10dp"
+        android:background="@null"
+        android:drawableLeft="@drawable/ic_route_start"
+        android:drawablePadding="10dp"
+        android:gravity="center_vertical"
+        android:hint="我的位置"
+        android:textColorHint="#000"/>
 
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="驾车"
-            android:textColor="#fff"
-            android:textSize="18sp"
-            />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="公交"
-            android:textColor="#fff"
-            android:textSize="18sp"
-            />
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:text="步行"
-            android:textColor="#fff"
-            android:textSize="18sp"
-            />
-    </LinearLayout>
-
-    <LinearLayout
+    <View
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal">
-        <ImageView
-            android:layout_width="wrap_content"
-            android:src="@drawable/ic_route_start"
-            android:layout_height="wrap_content"/>
-    </LinearLayout>
+        android:layout_height="1dp"
+        android:layout_marginLeft="10dp"
+        android:background="#cccccc"/>
+
+    <EditText
+        android:id="@+id/edt_end"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:layout_marginLeft="10dp"
+        android:background="@null"
+        android:drawableLeft="@drawable/ic_route_end"
+        android:drawablePadding="10dp"
+        android:gravity="center_vertical"
+        android:hint="输入终点位置"/>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginLeft="10dp"
+        android:background="#cccccc"/>
+
+    <ListView
+        android:id="@+id/lv_route"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
 </LinearLayout>

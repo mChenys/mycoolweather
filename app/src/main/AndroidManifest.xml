@@ -31,7 +31,7 @@
 
         </activity>
         <activity android:name=".WeatherActivity"/>
-        <activity android:name=".baidu.BDMapActivity">
+        <activity android:name=".BDMapActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
 
@@ -40,6 +40,7 @@
         </activity>
 
         <service android:name=".service.AutoUpdateService"/>
+        <activity android:name=".RoutePlanActiviy"/>
         <!--baidu-->
         <service
             android:name="com.baidu.location.f"

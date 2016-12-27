@@ -1,4 +1,4 @@
-package mchenys.net.csdn.blog.coolweather.baidu;
+package mchenys.net.csdn.blog.coolweather;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -31,8 +31,6 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-
-import mchenys.net.csdn.blog.coolweather.R;
 
 /**
  * Created by mChenys on 2016/12/24.
