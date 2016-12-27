@@ -1,9 +1,8 @@
 package mchenys.net.csdn.blog.coolweather;
 
 import android.content.Context;
-import android.content.SharedPreferences;
+import android.content.Intent;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
@@ -41,11 +40,12 @@ public class BDMapActivity extends AppCompatActivity {
     private BaiduMap mBaiduMap;
     private Toolbar mToolbar;
     private LocationClient mLocationClient;
-    private boolean isFirstLocate;
+    private boolean isFirstLoc;
     private MenuItem mTrafficItem, mHeatItem;
     private Button mChangeMarkerBtn; //指针的类型,普通,跟随,罗盘
     private MyLocationConfiguration.LocationMode mCurrentMode = MyLocationConfiguration.LocationMode.NORMAL;
     private ImageButton mRouteIb;
+    private String startCityName, startPlaceName;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -54,6 +54,7 @@ public class BDMapActivity extends AppCompatActivity {
         setContentView(R.layout.activity_bdmap);
         initView();
         requestLocation();
+        initListener();
     }
 
 
@@ -79,12 +80,24 @@ public class BDMapActivity extends AppCompatActivity {
         mLocationClient.registerLocationListener(new MyLocationListener());
         LocationClientOption option = new LocationClientOption();
         option.setScanSpan(5000);//设置刷新间隔
-        option.setCoorType("bd09ll"); // 设置坐标类型
+        option.setCoorType("bd09ll"); // 设置坐标类型为百度坐标系统
         option.setIsNeedAddress(true);//需要获取当前位置的详细地址
         option.setLocationMode(LocationClientOption.LocationMode.Hight_Accuracy);//高精度模式(gps/wifi/蓝牙/网络方式定位)
         mLocationClient.setLocOption(option);
         mLocationClient.start();
 
+    }
+
+    private void initListener() {
+        mRouteIb.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(BDMapActivity.this, RoutePlanActiviy.class);
+                intent.putExtra("cityName", startCityName);
+                intent.putExtra("address", startPlaceName);
+                startActivityForResult(intent, 100, null);
+            }
+        });
     }
 
     /**
@@ -93,27 +106,22 @@ public class BDMapActivity extends AppCompatActivity {
      * @param location
      */
     private void navigateTo(BDLocation location) {
-        if (!isFirstLocate) {
-            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-            double latitude = prefs.getString("latitude", null) == null ? -1 : Double.parseDouble(prefs.getString("latitude", null));
-            double longitude = prefs.getString("longitude", null) == null ? -1 : Double.parseDouble(prefs.getString("longitude", null));
-            Log.d(TAG, "navigateTo 首次进入:latitude:" + latitude + " longitude:" + longitude);
-            if (-1 != latitude && -1 != longitude) {
-                LatLng ll = new LatLng(latitude, longitude);
-                MapStatus.Builder builder = new MapStatus.Builder();
-                builder.target(ll).zoom(16.0f);
-                mBaiduMap.animateMapStatus(MapStatusUpdateFactory.newMapStatus(builder.build()));
-            }
-
-            isFirstLocate = true;
-        }
-        Log.d(TAG, "navigateTo 再次进入:latitude:" + location.getLatitude() + " longitude:" + location.getLongitude());
-        MyLocationData data = new MyLocationData.Builder()
+        MyLocationData locData = new MyLocationData.Builder()
                 .accuracy(location.getRadius())
-                .latitude(location.getLatitude())
-                .longitude(location.getLongitude())
-                .build();
-        mBaiduMap.setMyLocationData(data);
+                // 此处设置开发者获取到的方向信息，顺时针0-360
+                .direction(100).latitude(location.getLatitude())
+                .longitude(location.getLongitude()).build();
+        mBaiduMap.setMyLocationData(locData);
+        if (isFirstLoc) {
+            isFirstLoc = false;
+            LatLng ll = new LatLng(location.getLatitude(),
+                    location.getLongitude());
+            MapStatus.Builder builder = new MapStatus.Builder();
+            builder.target(ll).zoom(16.0f);
+            mBaiduMap.animateMapStatus(MapStatusUpdateFactory.newMapStatus(builder.build()));
+        }
+        startCityName = location.getCity();
+        startPlaceName = location.getDistrict() + location.getStreet();
     }
 
 
@@ -136,7 +144,6 @@ public class BDMapActivity extends AppCompatActivity {
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-
         menu.add(0, 0, 0, "普通地图");
         menu.add(0, 1, 1, "卫星地图");
         menu.add(0, 2, 2, "个性化地图");
@@ -271,6 +278,9 @@ public class BDMapActivity extends AppCompatActivity {
         }
 
         MapView.setCustomMapStylePath(moduleName + "/custom_config.txt");
+    }
 
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
     }
 }

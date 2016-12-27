@@ -8,9 +8,12 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.List;
+
 import mchenys.net.csdn.blog.coolweather.db.City;
 import mchenys.net.csdn.blog.coolweather.db.County;
 import mchenys.net.csdn.blog.coolweather.db.Province;
+import mchenys.net.csdn.blog.coolweather.gson.AddressInfo;
 import mchenys.net.csdn.blog.coolweather.gson.Weather;
 
 /**
@@ -87,4 +90,21 @@ public class Utility {
         }
         return null;
     }
+
+
+    public static List<AddressInfo> handleAddressSearchResponse(String response) {
+        try {
+            JSONObject jsonObject = new JSONObject(response);
+            if (null != jsonObject) {
+                JSONArray array = jsonObject.optJSONArray("s");
+                return AddressInfo.parseList(array);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+
 }

@@ -7,9 +7,11 @@
               android:orientation="vertical">
 
     <android.support.v7.widget.Toolbar
+        android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         android:background="@color/colorPrimary"
+        app:title=""
         android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
 
         <TextView
@@ -22,6 +24,7 @@
             android:textSize="20sp"/>
 
         <TextView
+            android:id="@+id/tv_search"
             android:layout_width="?attr/actionBarSize"
             android:layout_height="match_parent"
             android:layout_gravity="right"
@@ -42,8 +45,8 @@
         app:tabTextColor="#8fff"/>
 
 
-    <EditText
-        android:id="@+id/edt_start"
+    <TextView
+        android:id="@+id/tv_start"
         android:layout_width="match_parent"
         android:layout_height="50dp"
         android:layout_marginLeft="10dp"
@@ -51,8 +54,8 @@
         android:drawableLeft="@drawable/ic_route_start"
         android:drawablePadding="10dp"
         android:gravity="center_vertical"
-        android:hint="我的位置"
-        android:textColorHint="#000"/>
+        android:text="我的位置"
+        android:textColor="#000"/>
 
     <View
         android:layout_width="match_parent"
@@ -60,8 +63,8 @@
         android:layout_marginLeft="10dp"
         android:background="#cccccc"/>
 
-    <EditText
-        android:id="@+id/edt_end"
+    <TextView
+        android:id="@+id/tv_end"
         android:layout_width="match_parent"
         android:layout_height="50dp"
         android:layout_marginLeft="10dp"
@@ -69,6 +72,7 @@
         android:drawableLeft="@drawable/ic_route_end"
         android:drawablePadding="10dp"
         android:gravity="center_vertical"
+        android:textColor="#000"
         android:hint="输入终点位置"/>
 
     <View
