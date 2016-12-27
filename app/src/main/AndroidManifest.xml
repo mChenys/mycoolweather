@@ -32,16 +32,16 @@
         </activity>
         <activity android:name=".WeatherActivity"/>
         <activity android:name=".BDMapActivity">
-
-        </activity>
-
-        <service android:name=".service.AutoUpdateService"/>
-        <activity android:name=".RoutePlanActiviy">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
 
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+        </activity>
+
+        <service android:name=".service.AutoUpdateService"/>
+        <activity android:name=".RoutePlanActiviy">
+
         </activity>
         <activity android:name=".FindCityActivity">
 

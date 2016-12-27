@@ -5,23 +5,17 @@
               android:orientation="vertical">
 
     <TextView
-        android:id="@+id/transitName"
+        android:id="@+id/tv_city_name"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:padding="5dp"
-        />
+        android:textColor="#000"
+        android:textSize="18sp"/>
 
     <TextView
-        android:id="@+id/lightNum"
+        android:id="@+id/tv_address"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:padding="5dp"/>
-
-    <TextView
-        android:id="@+id/dis"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:padding="5dp"/>
-
-
+        android:padding="5dp"
+        android:textSize="16sp"/>
 </LinearLayout>

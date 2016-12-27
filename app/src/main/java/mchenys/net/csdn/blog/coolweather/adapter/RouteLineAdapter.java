@@ -21,20 +21,20 @@ public class RouteLineAdapter extends BaseAdapter {
     private LayoutInflater layoutInflater;
     private Type mtype;
 
-    public RouteLineAdapter(Context context, List<?extends RouteLine> routeLines, Type type) {
+    public RouteLineAdapter(Context context, List<? extends RouteLine> routeLines, Type type) {
         this.routeLines = routeLines;
-        layoutInflater = LayoutInflater.from( context);
+        layoutInflater = LayoutInflater.from(context);
         mtype = type;
     }
 
     @Override
     public int getCount() {
-        return routeLines.size();
+        return null == routeLines ? 0 : routeLines.size();
     }
 
     @Override
-    public Object getItem(int position) {
-        return position;
+    public RouteLine getItem(int position) {
+        return null == routeLines ? null : routeLines.get(position);
     }
 
     @Override
@@ -57,29 +57,29 @@ public class RouteLineAdapter extends BaseAdapter {
         }
 
         switch (mtype) {
-            case  TRANSIT_ROUTE:
+            case TRANSIT_ROUTE:
             case WALKING_ROUTE:
             case BIKING_ROUTE:
                 holder.name.setText("路线" + (position + 1));
                 int time = routeLines.get(position).getDuration();
-                if ( time / 3600 == 0 ) {
-                    holder.lightNum.setText( "大约需要：" + time / 60 + "分钟" );
+                if (time / 3600 == 0) {
+                    holder.lightNum.setText("大约需要：" + time / 60 + "分钟");
                 } else {
-                    holder.lightNum.setText( "大约需要：" + time / 3600 + "小时" + (time % 3600) / 60 + "分钟" );
+                    holder.lightNum.setText("大约需要：" + time / 3600 + "小时" + (time % 3600) / 60 + "分钟");
                 }
                 holder.dis.setText("距离大约是：" + routeLines.get(position).getDistance() + "米");
                 break;
 
             case DRIVING_ROUTE:
                 DrivingRouteLine drivingRouteLine = (DrivingRouteLine) routeLines.get(position);
-                holder.name.setText( "线路" + (position + 1));
-                holder.lightNum.setText( "红绿灯数：" + drivingRouteLine.getLightNum());
+                holder.name.setText("线路" + (position + 1));
+                holder.lightNum.setText("红绿灯数：" + drivingRouteLine.getLightNum());
                 holder.dis.setText("拥堵距离为：" + drivingRouteLine.getCongestionDistance() + "米");
                 break;
             case MASS_TRANSIT_ROUTE:
                 MassTransitRouteLine massTransitRouteLine = (MassTransitRouteLine) routeLines.get(position);
                 holder.name.setText("线路" + (position + 1));
-                holder.lightNum.setText( "预计达到时间：" + massTransitRouteLine.getArriveTime() );
+                holder.lightNum.setText("预计达到时间：" + massTransitRouteLine.getArriveTime());
                 holder.dis.setText("总票价：" + massTransitRouteLine.getPrice() + "元");
                 break;
 

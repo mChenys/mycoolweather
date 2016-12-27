@@ -13,6 +13,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageButton;
+import android.widget.Toast;
 
 import com.baidu.location.BDLocation;
 import com.baidu.location.BDLocationListener;
@@ -25,11 +26,23 @@ import com.baidu.mapapi.map.MapView;
 import com.baidu.mapapi.map.MyLocationConfiguration;
 import com.baidu.mapapi.map.MyLocationData;
 import com.baidu.mapapi.model.LatLng;
+import com.baidu.mapapi.search.core.RouteLine;
+import com.baidu.mapapi.search.route.BikingRouteLine;
+import com.baidu.mapapi.search.route.DrivingRouteLine;
+import com.baidu.mapapi.search.route.MassTransitRouteLine;
+import com.baidu.mapapi.search.route.TransitRouteLine;
+import com.baidu.mapapi.search.route.WalkingRouteLine;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+
+import mchenys.net.csdn.blog.coolweather.mapapi.overlayutil.BikingRouteOverlay;
+import mchenys.net.csdn.blog.coolweather.mapapi.overlayutil.DrivingRouteOverlay;
+import mchenys.net.csdn.blog.coolweather.mapapi.overlayutil.MassTransitRouteOverlay;
+import mchenys.net.csdn.blog.coolweather.mapapi.overlayutil.TransitRouteOverlay;
+import mchenys.net.csdn.blog.coolweather.mapapi.overlayutil.WalkingRouteOverlay;
 
 /**
  * Created by mChenys on 2016/12/24.
@@ -112,8 +125,8 @@ public class BDMapActivity extends AppCompatActivity {
                 .direction(100).latitude(location.getLatitude())
                 .longitude(location.getLongitude()).build();
         mBaiduMap.setMyLocationData(locData);
-        if (isFirstLoc) {
-            isFirstLoc = false;
+        if (!isFirstLoc) {
+            isFirstLoc = true;
             LatLng ll = new LatLng(location.getLatitude(),
                     location.getLongitude());
             MapStatus.Builder builder = new MapStatus.Builder();
@@ -282,5 +295,61 @@ public class BDMapActivity extends AppCompatActivity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (RESULT_OK == resultCode && 100 == requestCode) {
+            int nowSearchType = data.getIntExtra("nowSearchType", -1);
+            RouteLine routeLine = data.getParcelableExtra("routeLine");
+            boolean isSameCity = data.getBooleanExtra("isSameCity", false);//是否是同城,跨域交通用到
+            if (null == routeLine || -1 == nowSearchType) {
+                Toast.makeText(BDMapActivity.this, "获取路线失败", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            switch (nowSearchType) {
+                case 0://跨城交通
+                    MassTransitRouteOverlay overlay0 = new MassTransitRouteOverlay(mBaiduMap);
+                    mBaiduMap.setOnMarkerClickListener(overlay0);
+                    MassTransitRouteLine nowRouteMass = (MassTransitRouteLine) routeLine;
+                    overlay0.setData(nowRouteMass);
+                    if (isSameCity) {
+                        overlay0.setSameCity(true); // 同城
+                    } else {
+                        overlay0.setSameCity(false);// 跨城
+                    }
+                    overlay0.addToMap();
+                    overlay0.zoomToSpan();
+                    break;
+                case 1://驾车
+                    DrivingRouteOverlay overlay1 = new DrivingRouteOverlay(mBaiduMap);
+                    mBaiduMap.setOnMarkerClickListener(overlay1);
+                    DrivingRouteLine nowRouteDriving = (DrivingRouteLine) routeLine;
+                    overlay1.setData(nowRouteDriving);
+                    overlay1.addToMap();
+                    overlay1.zoomToSpan();
+                    break;
+                case 2://公交
+                    TransitRouteOverlay overlay2 = new TransitRouteOverlay(mBaiduMap);
+                    mBaiduMap.setOnMarkerClickListener(overlay2);
+                    TransitRouteLine nowRouteTransit = (TransitRouteLine) routeLine;
+                    overlay2.setData(nowRouteTransit);
+                    overlay2.addToMap();
+                    overlay2.zoomToSpan();
+                    break;
+                case 3://步行
+                    WalkingRouteOverlay overlay3 = new WalkingRouteOverlay(mBaiduMap);
+                    mBaiduMap.setOnMarkerClickListener(overlay3);
+                    WalkingRouteLine nowRouteWalking = (WalkingRouteLine) routeLine;
+                    overlay3.setData(nowRouteWalking);
+                    overlay3.addToMap();
+                    overlay3.zoomToSpan();
+                    break;
+                case 4://骑行
+                    BikingRouteOverlay overlay4 = new BikingRouteOverlay(mBaiduMap);
+                    mBaiduMap.setOnMarkerClickListener(overlay4);
+                    BikingRouteLine nowRouteBiking = (BikingRouteLine) routeLine;
+                    overlay4.setData(nowRouteBiking);
+                    overlay4.addToMap();
+                    overlay4.zoomToSpan();
+                    break;
+            }
+        }
     }
 }

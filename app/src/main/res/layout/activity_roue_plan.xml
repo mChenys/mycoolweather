@@ -11,7 +11,6 @@
         android:layout_width="match_parent"
         android:layout_height="?attr/actionBarSize"
         android:background="@color/colorPrimary"
-        app:title=""
         android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
 
         <TextView
@@ -72,8 +71,8 @@
         android:drawableLeft="@drawable/ic_route_end"
         android:drawablePadding="10dp"
         android:gravity="center_vertical"
-        android:textColor="#000"
-        android:hint="输入终点位置"/>
+        android:hint="输入终点位置"
+        android:textColor="#000"/>
 
     <View
         android:layout_width="match_parent"
@@ -81,8 +80,17 @@
         android:layout_marginLeft="10dp"
         android:background="#cccccc"/>
 
+    <TextView
+        android:visibility="gone"
+        android:id="@+id/tv_suggest_info"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="10dp"
+        android:text="你是想找哪个作为起点位置"/>
+
     <ListView
         android:id="@+id/lv_route"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
+        android:layout_height="match_parent"
+        android:layout_marginLeft="10dp"/>
 </LinearLayout>

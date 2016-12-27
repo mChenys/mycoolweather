@@ -11,12 +11,14 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.BaseAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.baidu.mapapi.search.core.CityInfo;
 import com.baidu.mapapi.search.core.PoiInfo;
+import com.baidu.mapapi.search.core.RouteLine;
 import com.baidu.mapapi.search.core.SearchResult;
 import com.baidu.mapapi.search.route.BikingRoutePlanOption;
 import com.baidu.mapapi.search.route.BikingRouteResult;
@@ -35,6 +37,7 @@ import com.baidu.mapapi.search.route.WalkingRoutePlanOption;
 import com.baidu.mapapi.search.route.WalkingRouteResult;
 
 import mchenys.net.csdn.blog.coolweather.adapter.RouteLineAdapter;
+import mchenys.net.csdn.blog.coolweather.adapter.RouteLineSuggestAdapter;
 
 /**
  * Created by mChenys on 2016/12/27.
@@ -43,15 +46,19 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
     private static final String TAG = "RoutePlanActiviy";
     private Toolbar mToolbar;
     private TabLayout mTabLayout;
-    private ListView mListView;
+    private ListView mRoutePlanLv;
     private TextView mStartNodeTv, mEndNodeTv;
     private TextView mSearchTv;
+    private TextView mSuggestTv;
     private ProgressDialog mProgressDialog;
     private String[] title = new String[]{"跨城交通", "驾车", "公交", "步行", "骑行"};
-    private int nowSearchType = -1; // 当前进行的检索，供判断浏览节点时结果使用。
+    private int nowSearchType = 0; // 当前进行的检索，供判断浏览节点时结果使用。
     private String startCityName, startPlaceName;
     private String endCityName, endPlaceName;
     private RoutePlanSearch mSearch;
+    private boolean isSameCity;//是否是同城,跨域交通用到
+    private boolean isStartNode;
+    private String myCityName,myPlaceName;
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -74,19 +81,23 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
         setSupportActionBar(mToolbar);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         mToolbar.setNavigationIcon(R.drawable.ic_back);
-        mListView = (ListView) findViewById(R.id.lv_route);
+        mToolbar.setTitle("");
+        mRoutePlanLv = (ListView) findViewById(R.id.lv_route);
         mStartNodeTv = (TextView) findViewById(R.id.tv_start);
         mEndNodeTv = (TextView) findViewById(R.id.tv_end);
         mTabLayout = (TabLayout) findViewById(R.id.tabLayout);
         mSearchTv = (TextView) findViewById(R.id.tv_search);
+        mSuggestTv = (TextView) findViewById(R.id.tv_suggest_info);
     }
 
     private void initData() {
         for (int i = 0; i < title.length; i++) {
             mTabLayout.addTab(mTabLayout.newTab().setText(title[i]));
         }
-        startCityName = getIntent().getStringExtra("cityName");
-        startPlaceName = getIntent().getStringExtra("address");
+        myCityName = getIntent().getStringExtra("cityName");
+        myPlaceName = getIntent().getStringExtra("address");
+        endCityName = startCityName = myCityName;
+        endPlaceName = startPlaceName =myPlaceName;
     }
 
     private void initListener() {
@@ -123,6 +134,7 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
             public void onClick(View v) {
                 if (checkValue()) {
                     showProgressDialog();
+
                     // 处理搜索按钮响应
                     // 设置起终点信息，对于tranist search 来说，城市名无意义
                     PlanNode stNode = PlanNode.withCityNameAndPlaceName(startCityName, startPlaceName);
@@ -134,23 +146,45 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
                             mSearch.masstransitSearch(new MassTransitRoutePlanOption().from(stMassNode).to(enMassNode));
                             break;
                         case 1:
-                            mSearch.drivingSearch((new DrivingRoutePlanOption())
-                                    .from(stNode).to(enNode));
+                            mSearch.drivingSearch((new DrivingRoutePlanOption()).from(stNode).to(enNode));
                             break;
                         case 2:
-                            mSearch.transitSearch((new TransitRoutePlanOption())
-                                    .from(stNode).city(startCityName).to(enNode));
+                            mSearch.transitSearch((new TransitRoutePlanOption()).from(stNode).city(startCityName).to(enNode));
                             break;
                         case 3:
-                            mSearch.walkingSearch((new WalkingRoutePlanOption())
-                                    .from(stNode).to(enNode));
+                            mSearch.walkingSearch((new WalkingRoutePlanOption()).from(stNode).to(enNode));
                             break;
                         case 4:
-                            mSearch.bikingSearch((new BikingRoutePlanOption())
-                                    .from(stNode).to(enNode));
+                            mSearch.bikingSearch((new BikingRoutePlanOption()).from(stNode).to(enNode));
                             break;
                     }
                 }
+            }
+        });
+        mRoutePlanLv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                BaseAdapter adapter = (BaseAdapter) parent.getAdapter();
+                if (adapter instanceof RouteLineAdapter) {
+                    RouteLine routeLine = (RouteLine) parent.getItemAtPosition(position);
+                    Intent intent = getIntent();
+                    intent.putExtra("routeLine", routeLine);
+                    intent.putExtra("nowSearchType", nowSearchType);
+                    intent.putExtra("isSameCity", isSameCity);
+                    setResult(RESULT_OK, intent);
+                    finish();
+                } else if (adapter instanceof RouteLineSuggestAdapter) {
+                    PoiInfo poiInfo = (PoiInfo) parent.getItemAtPosition(position);
+                    if (isStartNode) {
+                        startPlaceName = poiInfo.address + " " + poiInfo.city + " " + poiInfo.name;
+                        mStartNodeTv.setText(startPlaceName);
+                    } else {
+                        endPlaceName = poiInfo.address + " " + poiInfo.city + " " + poiInfo.name;
+                        mEndNodeTv.setText(endPlaceName);
+                    }
+                    hideSuggest();
+                }
+
             }
         });
 
@@ -176,6 +210,7 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
             mProgressDialog.setMessage("正在搜索");
             mProgressDialog.setCanceledOnTouchOutside(false);
         }
+        mRoutePlanLv.setVisibility(View.VISIBLE);
         mProgressDialog.show();
     }
 
@@ -192,44 +227,44 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
     public void onGetWalkingRouteResult(WalkingRouteResult result) {
         if (result == null || result.error != SearchResult.ERRORNO.NO_ERROR) {
             Toast.makeText(RoutePlanActiviy.this, "抱歉，未找到结果", Toast.LENGTH_SHORT).show();
+            closeProvinceDialog();
         }
         if (result.error == SearchResult.ERRORNO.AMBIGUOUS_ROURE_ADDR) {
             // 起终点或途经点地址有岐义，通过以下接口获取建议查询信息
             SuggestAddrInfo suggestAddrInfo = result.getSuggestAddrInfo();
             if (null != suggestAddrInfo) {
-                if (suggestAddrInfo.getSuggestStartCity() != null)
-                    for (CityInfo start : suggestAddrInfo.getSuggestStartCity()) {
-                        Log.d(TAG, "StartCity->city:" + start.city + " num:" + start.num);
+                if (null != suggestAddrInfo) {
+                    RouteLineSuggestAdapter suggestAdapter = null;
+                    if (suggestAddrInfo.getSuggestStartNode() != null) {
+                        showSuggest(true);
+                        suggestAdapter = new RouteLineSuggestAdapter(RoutePlanActiviy.this, suggestAddrInfo.getSuggestStartNode());
+                        for (PoiInfo pi : suggestAddrInfo.getSuggestStartNode()) {
+                            Log.d(TAG, "StartNode->address:" + pi.address + " city:" + pi.city + " name:" + pi.name + " phoneNum:" + pi.phoneNum + " postCode:" + pi.postCode);
+                        }
                     }
-                if (suggestAddrInfo.getSuggestEndCity() != null)
-                    for (CityInfo end : suggestAddrInfo.getSuggestEndCity()) {
-                        Log.d(TAG, "EndCity->city:" + end.city + " num:" + end.num);
+                    if (suggestAddrInfo.getSuggestEndNode() != null) {
+                        showSuggest(false);
+                        suggestAdapter = new RouteLineSuggestAdapter(RoutePlanActiviy.this, suggestAddrInfo.getSuggestStartNode());
+                        for (PoiInfo pi : suggestAddrInfo.getSuggestEndNode()) {
+                            Log.d(TAG, "EndNode->address:" + pi.address + " city:" + pi.city + " name:" + pi.name + " phoneNum:" + pi.phoneNum + " postCode:" + pi.postCode);
+                        }
                     }
-                if (suggestAddrInfo.getSuggestStartNode() != null)
-                    for (PoiInfo pi : suggestAddrInfo.getSuggestStartNode()) {
-                        Log.d(TAG, "StartNode->address:" + pi.address + " city:" + pi.city + " name:" + pi.name + " phoneNum:" + pi.phoneNum + " postCode:" + pi.postCode);
+                    if (null != suggestAdapter) {
+                        mRoutePlanLv.setAdapter(suggestAdapter);
                     }
-                if (suggestAddrInfo.getSuggestEndNode() != null)
-                    for (PoiInfo pi : suggestAddrInfo.getSuggestEndNode()) {
-                        Log.d(TAG, "EndNode->address:" + pi.address + " city:" + pi.city + " name:" + pi.name + " phoneNum:" + pi.phoneNum + " postCode:" + pi.postCode);
-                    }
+                }
             }
             return;
         }
         if (result.error == SearchResult.ERRORNO.NO_ERROR) {
-//            nodeIndex = -1;
-//            mBtnPre.setVisibility(View.VISIBLE);
-//            mBtnNext.setVisibility(View.VISIBLE);
-
             if (result.getRouteLines().size() > 0) {
-//                nowResultwalk = result;
 
-                RouteLineAdapter mRouteLineAdapter = new RouteLineAdapter(RoutePlanActiviy.this,
+                RouteLineAdapter routeLineAdapter = new RouteLineAdapter(RoutePlanActiviy.this,
                         result.getRouteLines(),
                         RouteLineAdapter.Type.WALKING_ROUTE);
 
-                mListView.setAdapter(mRouteLineAdapter);
-                showProgressDialog();
+                mRoutePlanLv.setAdapter(routeLineAdapter);
+                closeProvinceDialog();
             } else {
                 Log.d("route result", "结果数<0");
                 return;
@@ -244,45 +279,45 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
 
         if (result == null || result.error != SearchResult.ERRORNO.NO_ERROR) {
             Toast.makeText(RoutePlanActiviy.this, "抱歉，未找到结果", Toast.LENGTH_SHORT).show();
+            closeProvinceDialog();
         }
         if (result.error == SearchResult.ERRORNO.AMBIGUOUS_ROURE_ADDR) {
             // 起终点或途经点地址有岐义，通过以下接口获取建议查询信息
             SuggestAddrInfo suggestAddrInfo = result.getSuggestAddrInfo();
             if (null != suggestAddrInfo) {
-                if (suggestAddrInfo.getSuggestStartCity() != null)
-                    for (CityInfo start : suggestAddrInfo.getSuggestStartCity()) {
-                        Log.d(TAG, "StartCity->city:" + start.city + " num:" + start.num);
+                if (null != suggestAddrInfo) {
+                    RouteLineSuggestAdapter suggestAdapter = null;
+                    if (suggestAddrInfo.getSuggestStartNode() != null) {
+                        showSuggest(true);
+                        suggestAdapter = new RouteLineSuggestAdapter(RoutePlanActiviy.this, suggestAddrInfo.getSuggestStartNode());
+                        for (PoiInfo pi : suggestAddrInfo.getSuggestStartNode()) {
+                            Log.d(TAG, "StartNode->address:" + pi.address + " city:" + pi.city + " name:" + pi.name + " phoneNum:" + pi.phoneNum + " postCode:" + pi.postCode);
+                        }
                     }
-                if (suggestAddrInfo.getSuggestEndCity() != null)
-                    for (CityInfo end : suggestAddrInfo.getSuggestEndCity()) {
-                        Log.d(TAG, "EndCity->city:" + end.city + " num:" + end.num);
+                    if (suggestAddrInfo.getSuggestEndNode() != null) {
+                        showSuggest(false);
+                        suggestAdapter = new RouteLineSuggestAdapter(RoutePlanActiviy.this, suggestAddrInfo.getSuggestStartNode());
+                        for (PoiInfo pi : suggestAddrInfo.getSuggestEndNode()) {
+                            Log.d(TAG, "EndNode->address:" + pi.address + " city:" + pi.city + " name:" + pi.name + " phoneNum:" + pi.phoneNum + " postCode:" + pi.postCode);
+                        }
                     }
-                if (suggestAddrInfo.getSuggestStartNode() != null)
-                    for (PoiInfo pi : suggestAddrInfo.getSuggestStartNode()) {
-                        Log.d(TAG, "StartNode->address:" + pi.address + " city:" + pi.city + " name:" + pi.name + " phoneNum:" + pi.phoneNum + " postCode:" + pi.postCode);
+                    if (null != suggestAdapter) {
+                        mRoutePlanLv.setAdapter(suggestAdapter);
                     }
-                if (suggestAddrInfo.getSuggestEndNode() != null)
-                    for (PoiInfo pi : suggestAddrInfo.getSuggestEndNode()) {
-                        Log.d(TAG, "EndNode->address:" + pi.address + " city:" + pi.city + " name:" + pi.name + " phoneNum:" + pi.phoneNum + " postCode:" + pi.postCode);
-                    }
+                }
             }
             return;
         }
         if (result.error == SearchResult.ERRORNO.NO_ERROR) {
-//            nodeIndex = -1;
-//            mBtnPre.setVisibility(View.VISIBLE);
-//            mBtnNext.setVisibility(View.VISIBLE);
-
 
             if (result.getRouteLines().size() > 0) {
-//                nowResultransit = result;
 
-                RouteLineAdapter mRouteLineAdapter = new RouteLineAdapter(RoutePlanActiviy.this,
+                RouteLineAdapter routeLineAdapter = new RouteLineAdapter(RoutePlanActiviy.this,
                         result.getRouteLines(),
                         RouteLineAdapter.Type.TRANSIT_ROUTE);
 
-                mListView.setAdapter(mRouteLineAdapter);
-                showProgressDialog();
+                mRoutePlanLv.setAdapter(routeLineAdapter);
+                closeProvinceDialog();
 
             } else {
                 Log.d("route result", "结果数<0");
@@ -297,27 +332,44 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
     public void onGetMassTransitRouteResult(MassTransitRouteResult result) {
         if (result == null || result.error != SearchResult.ERRORNO.NO_ERROR) {
             Toast.makeText(RoutePlanActiviy.this, "抱歉，未找到结果", Toast.LENGTH_SHORT).show();
+            closeProvinceDialog();
         }
         if (result.error == SearchResult.ERRORNO.AMBIGUOUS_ROURE_ADDR) {
             // 起终点模糊，获取建议列表
-            result.getSuggestAddrInfo();
+            SuggestAddrInfo suggestAddrInfo = result.getSuggestAddrInfo();
+            if (null != suggestAddrInfo) {
+                if (null != suggestAddrInfo) {
+                    RouteLineSuggestAdapter suggestAdapter = null;
+                    if (suggestAddrInfo.getSuggestStartNode() != null) {
+                        showSuggest(true);
+                        suggestAdapter = new RouteLineSuggestAdapter(RoutePlanActiviy.this, suggestAddrInfo.getSuggestStartNode());
+                        for (PoiInfo pi : suggestAddrInfo.getSuggestStartNode()) {
+                            Log.d(TAG, "StartNode->address:" + pi.address + " city:" + pi.city + " name:" + pi.name + " phoneNum:" + pi.phoneNum + " postCode:" + pi.postCode);
+                        }
+                    }
+                    if (suggestAddrInfo.getSuggestEndNode() != null) {
+                        showSuggest(false);
+                        suggestAdapter = new RouteLineSuggestAdapter(RoutePlanActiviy.this, suggestAddrInfo.getSuggestStartNode());
+                        for (PoiInfo pi : suggestAddrInfo.getSuggestEndNode()) {
+                            Log.d(TAG, "EndNode->address:" + pi.address + " city:" + pi.city + " name:" + pi.name + " phoneNum:" + pi.phoneNum + " postCode:" + pi.postCode);
+                        }
+                    }
+                    if (null != suggestAdapter) {
+                        mRoutePlanLv.setAdapter(suggestAdapter);
+                    }
+                }
+            }
             return;
         }
         if (result.error == SearchResult.ERRORNO.NO_ERROR) {
-//            nowResultmass = result;
-//
-//            nodeIndex = -1;
-//            mBtnPre.setVisibility(View.VISIBLE);
-//            mBtnNext.setVisibility(View.VISIBLE);
-
+            isSameCity = result.getOrigin().getCityId() == result.getDestination().getCityId();
             if (result.getRouteLines().size() > 0) {
                 // 列表选择
-                RouteLineAdapter mRouteLineAdapter = new RouteLineAdapter(RoutePlanActiviy.this,
+                RouteLineAdapter routeLineAdapter = new RouteLineAdapter(RoutePlanActiviy.this,
                         result.getRouteLines(),
                         RouteLineAdapter.Type.MASS_TRANSIT_ROUTE);
-//                nowResultmass = result;
-                mListView.setAdapter(mRouteLineAdapter);
-                showProgressDialog();
+                mRoutePlanLv.setAdapter(routeLineAdapter);
+                closeProvinceDialog();
             } else {
                 Log.d("route result", "结果数<0");
                 return;
@@ -331,45 +383,43 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
     public void onGetDrivingRouteResult(DrivingRouteResult result) {
         if (result == null || result.error != SearchResult.ERRORNO.NO_ERROR) {
             Toast.makeText(RoutePlanActiviy.this, "抱歉，未找到结果", Toast.LENGTH_SHORT).show();
+            closeProvinceDialog();
         }
         if (result.error == SearchResult.ERRORNO.AMBIGUOUS_ROURE_ADDR) {
             // 起终点或途经点地址有岐义，通过以下接口获取建议查询信息
             SuggestAddrInfo suggestAddrInfo = result.getSuggestAddrInfo();
             if (null != suggestAddrInfo) {
-                if (suggestAddrInfo.getSuggestStartCity() != null)
-                    for (CityInfo start : suggestAddrInfo.getSuggestStartCity()) {
-                        Log.d(TAG, "StartCity->city:" + start.city + " num:" + start.num);
-                    }
-                if (suggestAddrInfo.getSuggestEndCity() != null)
-                    for (CityInfo end : suggestAddrInfo.getSuggestEndCity()) {
-                        Log.d(TAG, "EndCity->city:" + end.city + " num:" + end.num);
-                    }
-                if (suggestAddrInfo.getSuggestStartNode() != null)
+                RouteLineSuggestAdapter suggestAdapter = null;
+                if (suggestAddrInfo.getSuggestStartNode() != null) {
+                    showSuggest(true);
+                    suggestAdapter = new RouteLineSuggestAdapter(RoutePlanActiviy.this, suggestAddrInfo.getSuggestStartNode());
                     for (PoiInfo pi : suggestAddrInfo.getSuggestStartNode()) {
                         Log.d(TAG, "StartNode->address:" + pi.address + " city:" + pi.city + " name:" + pi.name + " phoneNum:" + pi.phoneNum + " postCode:" + pi.postCode);
                     }
-                if (suggestAddrInfo.getSuggestEndNode() != null)
+                }
+                if (suggestAddrInfo.getSuggestEndNode() != null) {
+                    showSuggest(false);
+                    suggestAdapter = new RouteLineSuggestAdapter(RoutePlanActiviy.this, suggestAddrInfo.getSuggestStartNode());
                     for (PoiInfo pi : suggestAddrInfo.getSuggestEndNode()) {
                         Log.d(TAG, "EndNode->address:" + pi.address + " city:" + pi.city + " name:" + pi.name + " phoneNum:" + pi.phoneNum + " postCode:" + pi.postCode);
                     }
+                }
+                if (null != suggestAdapter) {
+                    mRoutePlanLv.setAdapter(suggestAdapter);
+                }
             }
             return;
         }
         if (result.error == SearchResult.ERRORNO.NO_ERROR) {
-//            nodeIndex = -1;
-
-
             if (result.getRouteLines().size() > 0) {
-//                nowResultdrive = result;
-
-                RouteLineAdapter mRouteLineAdapter = new RouteLineAdapter(RoutePlanActiviy.this,
+                RouteLineAdapter routeLineAdapter = new RouteLineAdapter(RoutePlanActiviy.this,
                         result.getRouteLines(),
                         RouteLineAdapter.Type.DRIVING_ROUTE);
 
-                mListView.setAdapter(mRouteLineAdapter);
-                showProgressDialog();
+                mRoutePlanLv.setAdapter(routeLineAdapter);
+                closeProvinceDialog();
 
-            }  else {
+            } else {
                 Log.d("route result", "结果数<0");
                 return;
             }
@@ -386,43 +436,43 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
     public void onGetBikingRouteResult(BikingRouteResult result) {
         if (result == null || result.error != SearchResult.ERRORNO.NO_ERROR) {
             Toast.makeText(RoutePlanActiviy.this, "抱歉，未找到结果", Toast.LENGTH_SHORT).show();
+            closeProvinceDialog();
         }
         if (result.error == SearchResult.ERRORNO.AMBIGUOUS_ROURE_ADDR) {
             // 起终点或途经点地址有岐义，通过以下接口获取建议查询信息
             SuggestAddrInfo suggestAddrInfo = result.getSuggestAddrInfo();
             if (null != suggestAddrInfo) {
-                if (suggestAddrInfo.getSuggestStartCity() != null)
-                    for (CityInfo start : suggestAddrInfo.getSuggestStartCity()) {
-                        Log.d(TAG, "StartCity->city:" + start.city + " num:" + start.num);
+                if (null != suggestAddrInfo) {
+                    RouteLineSuggestAdapter suggestAdapter = null;
+                    if (suggestAddrInfo.getSuggestStartNode() != null) {
+                        showSuggest(true);
+                        suggestAdapter = new RouteLineSuggestAdapter(RoutePlanActiviy.this, suggestAddrInfo.getSuggestStartNode());
+                        for (PoiInfo pi : suggestAddrInfo.getSuggestStartNode()) {
+                            Log.d(TAG, "StartNode->address:" + pi.address + " city:" + pi.city + " name:" + pi.name + " phoneNum:" + pi.phoneNum + " postCode:" + pi.postCode);
+                        }
                     }
-                if (suggestAddrInfo.getSuggestEndCity() != null)
-                    for (CityInfo end : suggestAddrInfo.getSuggestEndCity()) {
-                        Log.d(TAG, "EndCity->city:" + end.city + " num:" + end.num);
+                    if (suggestAddrInfo.getSuggestEndNode() != null) {
+                        showSuggest(false);
+                        suggestAdapter = new RouteLineSuggestAdapter(RoutePlanActiviy.this, suggestAddrInfo.getSuggestStartNode());
+                        for (PoiInfo pi : suggestAddrInfo.getSuggestEndNode()) {
+                            Log.d(TAG, "EndNode->address:" + pi.address + " city:" + pi.city + " name:" + pi.name + " phoneNum:" + pi.phoneNum + " postCode:" + pi.postCode);
+                        }
                     }
-                if (suggestAddrInfo.getSuggestStartNode() != null)
-                    for (PoiInfo pi : suggestAddrInfo.getSuggestStartNode()) {
-                        Log.d(TAG, "StartNode->address:" + pi.address + " city:" + pi.city + " name:" + pi.name + " phoneNum:" + pi.phoneNum + " postCode:" + pi.postCode);
+                    if (null != suggestAdapter) {
+                        mRoutePlanLv.setAdapter(suggestAdapter);
                     }
-                if (suggestAddrInfo.getSuggestEndNode() != null)
-                    for (PoiInfo pi : suggestAddrInfo.getSuggestEndNode()) {
-                        Log.d(TAG, "EndNode->address:" + pi.address + " city:" + pi.city + " name:" + pi.name + " phoneNum:" + pi.phoneNum + " postCode:" + pi.postCode);
-                    }
+                }
             }
             return;
         }
         if (result.error == SearchResult.ERRORNO.NO_ERROR) {
-//            nodeIndex = -1;
-//            mBtnPre.setVisibility(View.VISIBLE);
-//            mBtnNext.setVisibility(View.VISIBLE);
-
             if (result.getRouteLines().size() > 0) {
-//                nowResultbike = result;
 
-                RouteLineAdapter mRouteLineAdapter = new RouteLineAdapter(RoutePlanActiviy.this,
+                RouteLineAdapter routeLineAdapter = new RouteLineAdapter(RoutePlanActiviy.this,
                         result.getRouteLines(),
                         RouteLineAdapter.Type.DRIVING_ROUTE);
-                mListView.setAdapter(mRouteLineAdapter);
-                showProgressDialog();
+                mRoutePlanLv.setAdapter(routeLineAdapter);
+                closeProvinceDialog();
 
             } else {
                 Log.d("route result", "结果数<0");
@@ -445,6 +495,8 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
                     startPlaceName = data.getStringExtra("address");
                     if ("我的位置".equals(startCityName)) {
                         mStartNodeTv.setText("我的位置");
+                        startCityName = myCityName;
+                        startPlaceName = myPlaceName;
                     } else {
                         mStartNodeTv.setText(startCityName + " " + startPlaceName);
                     }
@@ -454,11 +506,25 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
                     endPlaceName = data.getStringExtra("address");
                     if ("我的位置".equals(endCityName)) {
                         mEndNodeTv.setText("我的位置");
+                        endCityName = myCityName;
+                        endPlaceName = myPlaceName;
                     } else {
                         mEndNodeTv.setText(endCityName + " " + endPlaceName);
                     }
                     break;
             }
         }
+    }
+
+    private void showSuggest(boolean isStartNode) {
+        this.isStartNode = isStartNode;
+        mSuggestTv.setText(isStartNode ? "你是想找哪个作为起点位置" : "你是想找哪个作为终点位置");
+        mSuggestTv.setVisibility(View.VISIBLE);
+        mRoutePlanLv.setVisibility(View.VISIBLE);
+    }
+
+    private void hideSuggest() {
+        mSuggestTv.setVisibility(View.GONE);
+        mRoutePlanLv.setVisibility(View.GONE);
     }
 }
