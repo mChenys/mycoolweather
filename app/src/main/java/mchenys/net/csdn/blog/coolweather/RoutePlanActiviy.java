@@ -343,6 +343,7 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
             return;
         }
         if (result.error == SearchResult.ERRORNO.NO_ERROR) {
+            closeProgressDialog();
             isSameCity = result.getOrigin().getCityId() == result.getDestination().getCityId();
             if (result.getRouteLines().size() > 1) {
                 // 列表选择

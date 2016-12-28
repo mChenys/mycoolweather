@@ -36,6 +36,14 @@
             android:layout_height="match_parent"
             android:clickable="true"/>
 
+        <ImageView
+            android:id="@+id/iv_step_back"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginLeft="5dp"
+            android:layout_marginTop="5dp"
+            android:background="@drawable/icon_step_back"/>
+
         <ImageButton
             android:id="@+id/ib_route"
             android:layout_width="wrap_content"
@@ -44,20 +52,23 @@
             android:background="@drawable/selector_route"/>
 
         <LinearLayout
-            android:background="#5fff"
             android:id="@+id/ll_step"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
+            android:layout_height="0dp"
+            android:layout_gravity="bottom"
+            android:background="#fff"
             android:orientation="vertical"
             android:paddingLeft="10dp">
 
             <TextView
-                android:gravity="center_vertical"
                 android:id="@+id/tv_step_desc"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:paddingBottom="5dp"
-                android:paddingTop="5dp"
+                android:drawableRight="@drawable/selector_arrow_change"
+                android:gravity="center_vertical"
+                android:paddingBottom="10dp"
+                android:paddingRight="10dp"
+                android:paddingTop="10dp"
                 />
 
             <ListView
