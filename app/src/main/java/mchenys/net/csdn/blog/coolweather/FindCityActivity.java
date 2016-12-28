@@ -11,9 +11,7 @@ import android.text.TextWatcher;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.AdapterView;
-import android.widget.BaseAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -25,7 +23,8 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.List;
 
-import mchenys.net.csdn.blog.coolweather.gson.AddressInfo;
+import mchenys.net.csdn.blog.coolweather.adapter.AddressAdapter;
+import mchenys.net.csdn.blog.coolweather.db.AddressInfo;
 import mchenys.net.csdn.blog.coolweather.util.HttpUtil;
 import mchenys.net.csdn.blog.coolweather.util.Utility;
 import okhttp3.Call;
@@ -39,9 +38,12 @@ public class FindCityActivity extends AppCompatActivity {
     private static final String TAG = "FindCityActivity";
     private TextView mBackTv, mOkBtn;
     private EditText mInputEdt;
-    private ListView mAddressLv;
+    private ListView mResultAddressLv, mHistoryAddressLv;
     private List<AddressInfo> mSearchResult = new ArrayList<>();
-    private AddressAdapter mAdapter;
+    private List<AddressInfo> mSearchHistory = new ArrayList<>();
+    private AddressAdapter mResultAdapter;
+    private AddressAdapter mHistoryAdapter;
+    private boolean isHistoryShow;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -49,6 +51,32 @@ public class FindCityActivity extends AppCompatActivity {
         setContentView(R.layout.activity_find_city);
         initView();
         initListener();
+        initData();
+    }
+
+    private void initView() {
+        mBackTv = (TextView) findViewById(R.id.tv_back);
+        mOkBtn = (TextView) findViewById(R.id.tv_ok);
+        mInputEdt = (EditText) findViewById(R.id.edt_input);
+        mResultAddressLv = (ListView) findViewById(R.id.lv_result);
+        mHistoryAddressLv = (ListView) findViewById(R.id.lv_history_result);
+        mResultAdapter = new AddressAdapter(this, mSearchResult);
+        mHistoryAdapter = new AddressAdapter(this, mSearchHistory);
+        mResultAddressLv.setAdapter(mResultAdapter);
+        mHistoryAddressLv.setAdapter(mHistoryAdapter);
+        changeContentShow(true);
+    }
+
+    private void changeContentShow(boolean isHistoryShow) {
+        this.isHistoryShow = isHistoryShow;
+        mHistoryAddressLv.setVisibility(isHistoryShow ? View.VISIBLE : View.GONE);
+        mResultAddressLv.setVisibility(isHistoryShow ? View.GONE : View.VISIBLE);
+    }
+
+    private void initData() {
+        mSearchHistory.clear();
+        mSearchHistory.addAll(AddressInfo.getHistoryList());
+        mHistoryAdapter.notifyDataSetChanged();
     }
 
     private void initListener() {
@@ -73,13 +101,26 @@ public class FindCityActivity extends AppCompatActivity {
                 finish();
             }
         });
-        mAddressLv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        mResultAddressLv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 AddressInfo info = mSearchResult.get(position);
                 Intent intent = getIntent();
-                intent.putExtra("cityName", info.cityName);
-                intent.putExtra("address", info.address);
+                intent.putExtra("cityName", info.getCityName());
+                intent.putExtra("address", info.getAddress());
+                info.save();
+                setResult(RESULT_OK, intent);
+                finish();
+            }
+        });
+        mHistoryAddressLv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                AddressInfo info = mSearchHistory.get(position);
+                Intent intent = getIntent();
+                intent.putExtra("cityName", info.getCityName());
+                intent.putExtra("address", info.getAddress());
+                info.save();
                 setResult(RESULT_OK, intent);
                 finish();
             }
@@ -99,9 +140,9 @@ public class FindCityActivity extends AppCompatActivity {
             public void afterTextChanged(Editable s) {
                 String search = s.toString().trim();
                 if (TextUtils.isEmpty(search)) {
-                    mAddressLv.setVisibility(View.GONE);
+                    mResultAddressLv.setVisibility(View.GONE);
                 } else {
-                    mAddressLv.setVisibility(View.VISIBLE);
+                    mResultAddressLv.setVisibility(View.VISIBLE);
                     loadData(search);
                 }
             }
@@ -150,7 +191,8 @@ public class FindCityActivity extends AppCompatActivity {
                             mSearchResult.clear();
                             mSearchResult.addAll(data);
                             Log.d(TAG, "mSearchResult->" + mSearchResult.toString());
-                            mAdapter.notifyDataSetChanged();
+                            mResultAdapter.notifyDataSetChanged();
+                            changeContentShow(false);
                         }
                     });
                 }
@@ -158,55 +200,5 @@ public class FindCityActivity extends AppCompatActivity {
         });
     }
 
-    private void initView() {
-        mBackTv = (TextView) findViewById(R.id.tv_back);
-        mOkBtn = (TextView) findViewById(R.id.tv_ok);
-        mInputEdt = (EditText) findViewById(R.id.edt_input);
-        mAddressLv = (ListView) findViewById(R.id.lv_result);
-        mAdapter = new AddressAdapter();
-        mAddressLv.setAdapter(mAdapter);
-    }
-
-    private class AddressAdapter extends BaseAdapter {
-
-        @Override
-        public int getCount() {
-            return mSearchResult.size();
-        }
-
-        @Override
-        public AddressInfo getItem(int position) {
-            return mSearchResult.get(position);
-        }
-
-        @Override
-        public long getItemId(int position) {
-            return position;
-        }
-
-        @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
-            ViewHolder holder = null;
-            if (convertView == null) {
-                convertView = View.inflate(FindCityActivity.this, R.layout.item_search_list, null);
-                holder = new ViewHolder();
-                holder.cityTv = (TextView) convertView.findViewById(R.id.tv_city);
-                holder.addressTv = (TextView) convertView.findViewById(R.id.tv_address);
-                convertView.setTag(holder);
-            } else {
-                holder = (ViewHolder) convertView.getTag();
-            }
-            AddressInfo info = getItem(position);
-            holder.addressTv.setVisibility(TextUtils.isEmpty(info.address) ? View.GONE : View.VISIBLE);
-            holder.addressTv.setText(info.address);
-            holder.cityTv.setText(info.cityName);
-            return convertView;
-        }
-
-        private class ViewHolder {
-            private TextView cityTv;
-            private TextView addressTv;
-        }
-    }
 
 }

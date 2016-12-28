@@ -13,7 +13,7 @@ import java.util.List;
 import mchenys.net.csdn.blog.coolweather.db.City;
 import mchenys.net.csdn.blog.coolweather.db.County;
 import mchenys.net.csdn.blog.coolweather.db.Province;
-import mchenys.net.csdn.blog.coolweather.gson.AddressInfo;
+import mchenys.net.csdn.blog.coolweather.db.AddressInfo;
 import mchenys.net.csdn.blog.coolweather.gson.Weather;
 
 /**

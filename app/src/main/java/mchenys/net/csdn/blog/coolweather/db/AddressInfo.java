@@ -1,8 +1,9 @@
-package mchenys.net.csdn.blog.coolweather.gson;
+package mchenys.net.csdn.blog.coolweather.db;
 
 import android.text.TextUtils;
 
 import org.json.JSONArray;
+import org.litepal.crud.DataSupport;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -10,9 +11,34 @@ import java.util.List;
 /**
  * Created by mChenys on 2016/12/27.
  */
-public class AddressInfo {
-    public String cityName;
-    public String address;
+public class AddressInfo extends DataSupport {
+    private int id;
+    private String cityName;
+    private String address;
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public String getCityName() {
+        return cityName;
+    }
+
+    public void setCityName(String cityName) {
+        this.cityName = cityName;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
 
     @Override
     public String toString() {
@@ -39,12 +65,22 @@ public class AddressInfo {
                     if (str.contains("$")) {
                         String[] arr = str.split("\\$+");
                         if (arr.length >= 3) {
-                            list.add(new AddressInfo(arr[0], arr[1] + arr[2]));
+                            AddressInfo addressInfo = new AddressInfo();
+                            addressInfo.setCityName(arr[0]);
+                            addressInfo.setAddress(arr[1] + arr[2]);
+                            list.add(addressInfo);
                         }
                     }
                 }
             }
         }
+        list.add(0, new AddressInfo("我的位置", ""));
+        return list;
+    }
+
+    public static List<AddressInfo> getHistoryList() {
+        List<AddressInfo> list = new ArrayList<>();
+        list.addAll(DataSupport.findAll(AddressInfo.class));
         list.add(0, new AddressInfo("我的位置", ""));
         return list;
     }

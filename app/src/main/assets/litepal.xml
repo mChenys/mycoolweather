@@ -6,5 +6,6 @@
         <mapping class="mchenys.net.csdn.blog.coolweather.db.Province"/>
         <mapping class="mchenys.net.csdn.blog.coolweather.db.City"/>
         <mapping class="mchenys.net.csdn.blog.coolweather.db.County"/>
+        <mapping class="mchenys.net.csdn.blog.coolweather.db.AddressInfo"/>
     </list>
 </litepal>
