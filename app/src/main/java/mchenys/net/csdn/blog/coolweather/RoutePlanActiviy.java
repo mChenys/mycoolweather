@@ -194,13 +194,9 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
                 BaseAdapter adapter = (BaseAdapter) parent.getAdapter();
                 if (adapter instanceof RouteLineAdapter) {
                     RouteLine routeLine = (RouteLine) parent.getItemAtPosition(position);
-                    Intent intent = getIntent();
-                    intent.putExtra("routeLine", routeLine);
-                    intent.putExtra("nowSearchType", nowSearchType);
-                    intent.putExtra("isSameCity", isSameCity);
-                    setResult(RESULT_OK, intent);
-                    finish();
+                    showRouteLineByMap(routeLine);
                 } else if (adapter instanceof RouteLineSuggestAdapter) {
+                    //选则了建议路线
                     mSuggestAdapter = (RouteLineSuggestAdapter) adapter;
                     SuggestAddressInfo sai = (SuggestAddressInfo) parent.getItemAtPosition(position);
                     if (sai.state == 1) {
@@ -222,8 +218,18 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
 
     }
 
+    private void showRouteLineByMap(RouteLine routeLine) {
+        Intent intent = getIntent();
+        intent.putExtra("routeLine", routeLine);
+        intent.putExtra("nowSearchType", nowSearchType);
+        intent.putExtra("isSameCity", isSameCity);
+        setResult(RESULT_OK, intent);
+        finish();
+    }
+
     /**
      * 开始地理位置和坐标转换
+     *
      * @param type
      */
     private void startGeoCode(int type) {
@@ -335,14 +341,16 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
         }
         if (result.error == SearchResult.ERRORNO.NO_ERROR) {
             isSameCity = result.getOrigin().getCityId() == result.getDestination().getCityId();
-            if (result.getRouteLines().size() > 0) {
+            if (result.getRouteLines().size() > 1) {
                 // 列表选择
                 RouteLineAdapter routeLineAdapter = new RouteLineAdapter(RoutePlanActiviy.this,
                         result.getRouteLines(),
                         RouteLineAdapter.Type.MASS_TRANSIT_ROUTE);
                 mRoutePlanLv.setAdapter(routeLineAdapter);
                 mRoutePlanLv.setVisibility(View.VISIBLE);
-                closeProgressDialog();
+
+            } else if (result.getRouteLines().size() == 1) {
+                showRouteLineByMap(result.getRouteLines().get(0));
             } else {
                 Log.d("route result", "结果数<0");
                 return;
@@ -369,15 +377,18 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
             return;
         }
         if (result.error == SearchResult.ERRORNO.NO_ERROR) {
-            if (result.getRouteLines().size() > 0) {
+            closeProgressDialog();
+
+            if (result.getRouteLines().size() > 1) {
                 RouteLineAdapter routeLineAdapter = new RouteLineAdapter(RoutePlanActiviy.this,
                         result.getRouteLines(),
                         RouteLineAdapter.Type.DRIVING_ROUTE);
 
                 mRoutePlanLv.setAdapter(routeLineAdapter);
                 mRoutePlanLv.setVisibility(View.VISIBLE);
-                closeProgressDialog();
 
+            } else if (result.getRouteLines().size() == 1) {
+                showRouteLineByMap(result.getRouteLines().get(0));
             } else {
                 Log.d("route result", "结果数<0");
                 return;
@@ -405,8 +416,9 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
             return;
         }
         if (result.error == SearchResult.ERRORNO.NO_ERROR) {
+            closeProgressDialog();
 
-            if (result.getRouteLines().size() > 0) {
+            if (result.getRouteLines().size() > 1) {
 
                 RouteLineAdapter routeLineAdapter = new RouteLineAdapter(RoutePlanActiviy.this,
                         result.getRouteLines(),
@@ -414,13 +426,13 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
 
                 mRoutePlanLv.setAdapter(routeLineAdapter);
                 mRoutePlanLv.setVisibility(View.VISIBLE);
-                closeProgressDialog();
 
+            } else if (result.getRouteLines().size() == 1) {
+                showRouteLineByMap(result.getRouteLines().get(0));
             } else {
                 Log.d("route result", "结果数<0");
                 return;
             }
-
 
         }
     }
@@ -442,7 +454,9 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
             return;
         }
         if (result.error == SearchResult.ERRORNO.NO_ERROR) {
-            if (result.getRouteLines().size() > 0) {
+            closeProgressDialog();
+
+            if (result.getRouteLines().size() > 1) {
 
                 RouteLineAdapter routeLineAdapter = new RouteLineAdapter(RoutePlanActiviy.this,
                         result.getRouteLines(),
@@ -450,7 +464,8 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
 
                 mRoutePlanLv.setAdapter(routeLineAdapter);
                 mRoutePlanLv.setVisibility(View.VISIBLE);
-                closeProgressDialog();
+            } else if (result.getRouteLines().size() == 1) {
+                showRouteLineByMap(result.getRouteLines().get(0));
             } else {
                 Log.d("route result", "结果数<0");
                 return;
@@ -478,15 +493,18 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
             return;
         }
         if (result.error == SearchResult.ERRORNO.NO_ERROR) {
-            if (result.getRouteLines().size() > 0) {
+            closeProgressDialog();
+
+            if (result.getRouteLines().size() > 1) {
 
                 RouteLineAdapter routeLineAdapter = new RouteLineAdapter(RoutePlanActiviy.this,
                         result.getRouteLines(),
                         RouteLineAdapter.Type.BIKING_ROUTE);
                 mRoutePlanLv.setAdapter(routeLineAdapter);
                 mRoutePlanLv.setVisibility(View.VISIBLE);
-                closeProgressDialog();
 
+            } else if (result.getRouteLines().size() == 1) {
+                showRouteLineByMap(result.getRouteLines().get(0));
             } else {
                 Log.d("route result", "结果数<0");
                 return;

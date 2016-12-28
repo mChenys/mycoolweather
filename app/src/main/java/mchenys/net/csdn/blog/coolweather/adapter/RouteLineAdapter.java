@@ -46,7 +46,7 @@ public class RouteLineAdapter extends BaseAdapter {
     public View getView(int position, View convertView, ViewGroup parent) {
         NodeViewHolder holder;
         if (convertView == null) {
-            convertView = layoutInflater.inflate(R.layout.activity_transit_item, null);
+            convertView = layoutInflater.inflate(R.layout.item_route_plan_list, null);
             holder = new NodeViewHolder();
             holder.name = (TextView) convertView.findViewById(R.id.transitName);
             holder.lightNum = (TextView) convertView.findViewById(R.id.lightNum);

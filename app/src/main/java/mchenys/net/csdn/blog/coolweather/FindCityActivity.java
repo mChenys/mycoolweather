@@ -188,7 +188,7 @@ public class FindCityActivity extends AppCompatActivity {
         public View getView(int position, View convertView, ViewGroup parent) {
             ViewHolder holder = null;
             if (convertView == null) {
-                convertView = View.inflate(FindCityActivity.this, R.layout.item_address_list, null);
+                convertView = View.inflate(FindCityActivity.this, R.layout.item_search_list, null);
                 holder = new ViewHolder();
                 holder.cityTv = (TextView) convertView.findViewById(R.id.tv_city);
                 holder.addressTv = (TextView) convertView.findViewById(R.id.tv_address);

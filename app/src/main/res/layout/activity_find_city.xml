@@ -31,7 +31,7 @@
             android:drawableLeft="@drawable/route_navi_search"
             android:drawablePadding="5dp"
             android:drawableRight="@drawable/ic_delete"
-            android:hint="输入起点"
+            android:hint="输入搜索位置"
             android:text="我的位置"
             android:selectAllOnFocus="true"
             android:paddingLeft="5dp"

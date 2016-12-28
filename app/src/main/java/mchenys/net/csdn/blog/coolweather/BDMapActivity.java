@@ -27,6 +27,7 @@ import com.baidu.mapapi.map.MyLocationConfiguration;
 import com.baidu.mapapi.map.MyLocationData;
 import com.baidu.mapapi.model.LatLng;
 import com.baidu.mapapi.search.core.RouteLine;
+import com.baidu.mapapi.search.core.RouteStep;
 import com.baidu.mapapi.search.route.BikingRouteLine;
 import com.baidu.mapapi.search.route.DrivingRouteLine;
 import com.baidu.mapapi.search.route.MassTransitRouteLine;
@@ -37,6 +38,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 
 import mchenys.net.csdn.blog.coolweather.mapapi.overlayutil.BikingRouteOverlay;
 import mchenys.net.csdn.blog.coolweather.mapapi.overlayutil.DrivingRouteOverlay;
@@ -303,6 +305,7 @@ public class BDMapActivity extends AppCompatActivity {
                 Toast.makeText(BDMapActivity.this, "获取路线失败", Toast.LENGTH_SHORT).show();
                 return;
             }
+
             switch (nowSearchType) {
                 case 0://跨城交通
                     MassTransitRouteOverlay overlay0 = new MassTransitRouteOverlay(mBaiduMap);
@@ -349,6 +352,10 @@ public class BDMapActivity extends AppCompatActivity {
                     overlay4.addToMap();
                     overlay4.zoomToSpan();
                     break;
+            }
+            List<RouteStep> step = routeLine.getAllStep();
+            if (step.size() > 0) {
+
             }
         }
     }

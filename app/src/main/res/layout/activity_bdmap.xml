@@ -44,4 +44,5 @@
             android:layout_marginRight="5dp"
             android:background="@drawable/selector_route"/>
     </FrameLayout>
+
 </LinearLayout>
