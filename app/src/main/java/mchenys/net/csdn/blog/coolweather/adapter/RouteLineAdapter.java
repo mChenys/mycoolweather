@@ -19,9 +19,9 @@ public class RouteLineAdapter extends BaseAdapter {
 
     private List<? extends RouteLine> routeLines;
     private LayoutInflater layoutInflater;
-    private Type mtype;
+    private int mtype;
 
-    public RouteLineAdapter(Context context, List<? extends RouteLine> routeLines, Type type) {
+    public RouteLineAdapter(Context context, List<? extends RouteLine> routeLines, int type) {
         this.routeLines = routeLines;
         layoutInflater = LayoutInflater.from(context);
         mtype = type;
@@ -57,9 +57,9 @@ public class RouteLineAdapter extends BaseAdapter {
         }
 
         switch (mtype) {
-            case TRANSIT_ROUTE:
-            case WALKING_ROUTE:
-            case BIKING_ROUTE:
+            case RouteType.TRANSIT_ROUTE:
+            case RouteType.WALKING_ROUTE:
+            case RouteType.BIKING_ROUTE:
                 holder.name.setText("路线" + (position + 1));
                 int time = routeLines.get(position).getDuration();
                 if (time / 3600 == 0) {
@@ -70,13 +70,13 @@ public class RouteLineAdapter extends BaseAdapter {
                 holder.dis.setText("距离大约是：" + routeLines.get(position).getDistance() + "米");
                 break;
 
-            case DRIVING_ROUTE:
+            case RouteType.DRIVING_ROUTE:
                 DrivingRouteLine drivingRouteLine = (DrivingRouteLine) routeLines.get(position);
                 holder.name.setText("线路" + (position + 1));
                 holder.lightNum.setText("红绿灯数：" + drivingRouteLine.getLightNum());
                 holder.dis.setText("拥堵距离为：" + drivingRouteLine.getCongestionDistance() + "米");
                 break;
-            case MASS_TRANSIT_ROUTE:
+            case RouteType.MASS_TRANSIT_ROUTE:
                 MassTransitRouteLine massTransitRouteLine = (MassTransitRouteLine) routeLines.get(position);
                 holder.name.setText("线路" + (position + 1));
                 holder.lightNum.setText("预计达到时间：" + massTransitRouteLine.getArriveTime());
@@ -98,12 +98,5 @@ public class RouteLineAdapter extends BaseAdapter {
         private TextView dis;
     }
 
-    public enum Type {
-        MASS_TRANSIT_ROUTE, // 综合交通
-        TRANSIT_ROUTE, // 公交
-        DRIVING_ROUTE, // 驾车
-        WALKING_ROUTE, // 步行
-        BIKING_ROUTE // 骑行
 
-    }
 }

@@ -43,6 +43,7 @@ import com.baidu.mapapi.search.route.WalkingRouteResult;
 
 import mchenys.net.csdn.blog.coolweather.adapter.RouteLineAdapter;
 import mchenys.net.csdn.blog.coolweather.adapter.RouteLineSuggestAdapter;
+import mchenys.net.csdn.blog.coolweather.adapter.RouteType;
 import mchenys.net.csdn.blog.coolweather.gson.SuggestAddressInfo;
 
 /**
@@ -58,7 +59,7 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
     private TextView mSuggestTv;
     private ProgressDialog mProgressDialog;
     private String[] title = new String[]{"跨城交通", "驾车", "公交", "步行", "骑行"};
-    private int nowSearchType = 0; // 当前进行的检索，供判断浏览节点时结果使用。
+    private int nowSearchType = RouteType.MASS_TRANSIT_ROUTE; // 当前进行的检索，供判断浏览节点时结果使用。
     private String startCityName, startPlaceName;
     private String endCityName, endPlaceName;
     private RoutePlanSearch mSearch;
@@ -169,19 +170,19 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
                     Log.d(TAG, "#start search->startCityName:" + startCityName + " startPlaceName:" + startPlaceName + " endCityName:" + endCityName + " endPlaceName:" + endPlaceName);
 
                     switch (nowSearchType) {
-                        case 0:
+                        case RouteType.MASS_TRANSIT_ROUTE:
                             mSearch.masstransitSearch(new MassTransitRoutePlanOption().from(stNode).to(enNode));
                             break;
-                        case 1:
+                        case RouteType.DRIVING_ROUTE:
                             mSearch.drivingSearch((new DrivingRoutePlanOption()).from(stNode).to(enNode));
                             break;
-                        case 2:
+                        case RouteType.TRANSIT_ROUTE:
                             mSearch.transitSearch((new TransitRoutePlanOption()).from(stNode).city(startCityName).to(enNode));
                             break;
-                        case 3:
+                        case RouteType.WALKING_ROUTE:
                             mSearch.walkingSearch((new WalkingRoutePlanOption()).from(stNode).to(enNode));
                             break;
-                        case 4:
+                        case RouteType.BIKING_ROUTE:
                             mSearch.bikingSearch((new BikingRoutePlanOption()).from(stNode).to(enNode));
                             break;
                     }
@@ -194,7 +195,7 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
                 BaseAdapter adapter = (BaseAdapter) parent.getAdapter();
                 if (adapter instanceof RouteLineAdapter) {
                     RouteLine routeLine = (RouteLine) parent.getItemAtPosition(position);
-                    showRouteLineByMap(routeLine);
+                    showRouteLineByMap(routeLine, position + 1);
                 } else if (adapter instanceof RouteLineSuggestAdapter) {
                     //选则了建议路线
                     mSuggestAdapter = (RouteLineSuggestAdapter) adapter;
@@ -218,11 +219,12 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
 
     }
 
-    private void showRouteLineByMap(RouteLine routeLine) {
+    private void showRouteLineByMap(RouteLine routeLine, int linePosition) {
         Intent intent = getIntent();
         intent.putExtra("routeLine", routeLine);
         intent.putExtra("nowSearchType", nowSearchType);
         intent.putExtra("isSameCity", isSameCity);
+        intent.putExtra("linePosition", linePosition);
         setResult(RESULT_OK, intent);
         finish();
     }
@@ -280,6 +282,7 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
 
     @Override
     public void onGetReverseGeoCodeResult(ReverseGeoCodeResult result) {
+
 
     }
 
@@ -345,12 +348,12 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
                 // 列表选择
                 RouteLineAdapter routeLineAdapter = new RouteLineAdapter(RoutePlanActiviy.this,
                         result.getRouteLines(),
-                        RouteLineAdapter.Type.MASS_TRANSIT_ROUTE);
+                        RouteType.MASS_TRANSIT_ROUTE);
                 mRoutePlanLv.setAdapter(routeLineAdapter);
                 mRoutePlanLv.setVisibility(View.VISIBLE);
 
             } else if (result.getRouteLines().size() == 1) {
-                showRouteLineByMap(result.getRouteLines().get(0));
+                showRouteLineByMap(result.getRouteLines().get(0), 1);
             } else {
                 Log.d("route result", "结果数<0");
                 return;
@@ -382,13 +385,13 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
             if (result.getRouteLines().size() > 1) {
                 RouteLineAdapter routeLineAdapter = new RouteLineAdapter(RoutePlanActiviy.this,
                         result.getRouteLines(),
-                        RouteLineAdapter.Type.DRIVING_ROUTE);
+                        RouteType.DRIVING_ROUTE);
 
                 mRoutePlanLv.setAdapter(routeLineAdapter);
                 mRoutePlanLv.setVisibility(View.VISIBLE);
 
             } else if (result.getRouteLines().size() == 1) {
-                showRouteLineByMap(result.getRouteLines().get(0));
+                showRouteLineByMap(result.getRouteLines().get(0), 1);
             } else {
                 Log.d("route result", "结果数<0");
                 return;
@@ -422,13 +425,13 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
 
                 RouteLineAdapter routeLineAdapter = new RouteLineAdapter(RoutePlanActiviy.this,
                         result.getRouteLines(),
-                        RouteLineAdapter.Type.TRANSIT_ROUTE);
+                        RouteType.TRANSIT_ROUTE);
 
                 mRoutePlanLv.setAdapter(routeLineAdapter);
                 mRoutePlanLv.setVisibility(View.VISIBLE);
 
             } else if (result.getRouteLines().size() == 1) {
-                showRouteLineByMap(result.getRouteLines().get(0));
+                showRouteLineByMap(result.getRouteLines().get(0), 1);
             } else {
                 Log.d("route result", "结果数<0");
                 return;
@@ -460,12 +463,12 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
 
                 RouteLineAdapter routeLineAdapter = new RouteLineAdapter(RoutePlanActiviy.this,
                         result.getRouteLines(),
-                        RouteLineAdapter.Type.WALKING_ROUTE);
+                        RouteType.WALKING_ROUTE);
 
                 mRoutePlanLv.setAdapter(routeLineAdapter);
                 mRoutePlanLv.setVisibility(View.VISIBLE);
             } else if (result.getRouteLines().size() == 1) {
-                showRouteLineByMap(result.getRouteLines().get(0));
+                showRouteLineByMap(result.getRouteLines().get(0), 1);
             } else {
                 Log.d("route result", "结果数<0");
                 return;
@@ -499,12 +502,12 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
 
                 RouteLineAdapter routeLineAdapter = new RouteLineAdapter(RoutePlanActiviy.this,
                         result.getRouteLines(),
-                        RouteLineAdapter.Type.BIKING_ROUTE);
+                        RouteType.BIKING_ROUTE);
                 mRoutePlanLv.setAdapter(routeLineAdapter);
                 mRoutePlanLv.setVisibility(View.VISIBLE);
 
             } else if (result.getRouteLines().size() == 1) {
-                showRouteLineByMap(result.getRouteLines().get(0));
+                showRouteLineByMap(result.getRouteLines().get(0), 1);
             } else {
                 Log.d("route result", "结果数<0");
                 return;
