@@ -81,7 +81,6 @@ public class AddressInfo extends DataSupport {
     public static List<AddressInfo> getHistoryList() {
         List<AddressInfo> list = new ArrayList<>();
         list.addAll(DataSupport.findAll(AddressInfo.class));
-        list.add(0, new AddressInfo("我的位置", ""));
         return list;
     }
 }

@@ -78,19 +78,20 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
     private MenuItem mTrafficItem, mHeatItem;
     private Button mChangeMarkerBtn;
     private ImageButton mRouteIb;
-    private String startCityName, startPlaceName;
+    private String startCityName, startPlaceName, mStartNodeName, mEndNodeName;
     private LinearLayout mStepLayout;//显示所有路线步骤的布局
     private TextView mStepDescTv;
     private ListView mRouteStepLv;//显示节点的ListView
     private int mContentHeight;
     private FrameLayout mContentFl;
     private ImageView mStepBackIv;
-    private int m100dp;
     //指针的类型,普通,跟随,罗盘
     private MyLocationConfiguration.LocationMode mCurrentMode = MyLocationConfiguration.LocationMode.NORMAL;
     private LocationClient mLocationClient;
     private BaiduMap mBaiduMap;
     private GeoCoder mGeoCoder;
+    private LatLng mStartLatLng, mEndLatLng;
+    private int nowSearchType;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -119,20 +120,24 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
         mRouteIb = (ImageButton) findViewById(R.id.ib_route);
         mStepBackIv = (ImageView) findViewById(R.id.iv_step_back);
         mStepBackIv.setVisibility(View.GONE);
-        m100dp = (int) getResources().getDimension(R.dimen.start_route_bottom_margin);
-        setStartRouteBottomMargin(m100dp);
+        setMapBottomMargin(0);
 
     }
 
-    private void setStartRouteBottomMargin(int value) {
-        if (value == m100dp) {
-            ((FrameLayout.LayoutParams) mRouteIb.getLayoutParams()).bottomMargin = m100dp;
-            mBaiduMap.setViewPadding(0, 0, 0, 0);
+    private void setMapBottomMargin(int value) {
+        if (value == 0) {
+            mRouteIb.setVisibility(View.VISIBLE);
+            mToolbar.setVisibility(View.VISIBLE);
+            //隐藏节点详情
+            mStepLayout.setVisibility(View.GONE);
+            mStepBackIv.setVisibility(View.GONE);
         } else {
-            ((FrameLayout.LayoutParams) mRouteIb.getLayoutParams()).bottomMargin = value + m100dp;
-            mBaiduMap.setViewPadding(0, 0, 0, value);
+            mToolbar.setVisibility(View.GONE);
+            mRouteIb.setVisibility(View.GONE);
+            mStepLayout.setVisibility(View.VISIBLE);
+            mStepBackIv.setVisibility(View.VISIBLE);
         }
-
+        mBaiduMap.setViewPadding(0, 0, 0, value);
     }
 
     /**
@@ -184,10 +189,19 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
         mStepBackIv.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                //隐藏节点详情
-                mStepLayout.setVisibility(View.GONE);
-                mStepBackIv.setVisibility(View.GONE);
-                setStartRouteBottomMargin(m100dp);
+                //返回路线选择页
+                Intent intent = new Intent(BDMapActivity.this, RoutePlanActiviy.class);
+                intent.putExtra("startLatlng", mStartLatLng);
+                intent.putExtra("endLatlng", mEndLatLng);
+                intent.putExtra("cityName", startCityName);
+                intent.putExtra("nowSearchType", nowSearchType);
+                intent.putExtra("isAutoSearch", true);
+                intent.putExtra("startNodeName", mStartNodeName);
+                intent.putExtra("endNodeName", mEndNodeName);
+                startActivityForResult(intent, 100, null);
+
+
+                setMapBottomMargin(0);
             }
         });
         mContentFl.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
@@ -206,8 +220,11 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(BDMapActivity.this, RoutePlanActiviy.class);
+                intent.putExtra("startLatlng", mStartLatLng);
+                intent.putExtra("endLatlng", mStartLatLng);
                 intent.putExtra("cityName", startCityName);
-                intent.putExtra("address", startPlaceName);
+                intent.putExtra("nowSearchType", nowSearchType);
+//                intent.putExtra("address", startPlaceName);
                 startActivityForResult(intent, 100, null);
             }
         });
@@ -226,7 +243,7 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
                 }
                 mStepDescTv.setSelected(isOpen);//打开:右边箭头向下,关闭:右边箭头向上
                 mStepLayout.setLayoutParams(flp);
-                setStartRouteBottomMargin(flp.height);
+                setMapBottomMargin(flp.height);
 
             }
         });
@@ -252,8 +269,9 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
             builder.target(ll).zoom(16.0f);
             mBaiduMap.animateMapStatus(MapStatusUpdateFactory.newMapStatus(builder.build()));
         }
+        mStartLatLng = new LatLng(location.getLatitude(), location.getLongitude());
         startCityName = location.getCity();
-        startPlaceName = location.getDistrict() + location.getStreet();
+//        startPlaceName = location.getDistrict() + location.getStreet();
     }
 
 
@@ -415,10 +433,15 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (RESULT_OK == resultCode && 100 == requestCode) {
-            int nowSearchType = data.getIntExtra("nowSearchType", -1);
-            RouteLine routeLine = data.getParcelableExtra("routeLine");
             int linePosition = data.getIntExtra("linePosition", 1);
             boolean isSameCity = data.getBooleanExtra("isSameCity", false);//是否是同城,跨域交通用到
+            RouteLine routeLine = data.getParcelableExtra("routeLine");
+            nowSearchType = data.getIntExtra("nowSearchType", -1);
+            mStartLatLng = data.getParcelableExtra("startLatlng");
+            mEndLatLng = data.getParcelableExtra("endLatlng");
+            startCityName = data.getStringExtra("startCityName");
+            mStartNodeName = data.getStringExtra("startNodeName");
+            mEndNodeName = data.getStringExtra("endNodeName");
             if (null == routeLine || -1 == nowSearchType) {
                 Toast.makeText(BDMapActivity.this, "获取路线失败", Toast.LENGTH_SHORT).show();
                 return;
@@ -545,11 +568,10 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
             steps = routeLine.getAllStep();
         }
         if (null != steps && steps.size() > 0) {
-            setStartRouteBottomMargin(mContentHeight * 1 / 4);
+            //显示路线详情
+            setMapBottomMargin(mContentHeight * 1 / 4);
             RouteStepAdapter stepAdapter = new RouteStepAdapter(this, steps);
             mRouteStepLv.setAdapter(stepAdapter);
-            mStepLayout.setVisibility(View.VISIBLE);
-            mStepBackIv.setVisibility(View.VISIBLE);
         }
         mRouteStepLv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
@@ -595,7 +617,7 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
         if (result != null && result.error == SearchResult.ERRORNO.NO_ERROR) {
             // show popup
             TextView popupText = new TextView(BDMapActivity.this);
-            popupText.setTextSize(TypedValue.COMPLEX_UNIT_SP,14);
+            popupText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
             popupText.setBackgroundResource(R.drawable.popup);
             popupText.setTextColor(0xFF000000);
             popupText.setText(result.getAddress());

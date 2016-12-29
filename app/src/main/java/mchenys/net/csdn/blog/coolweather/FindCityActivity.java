@@ -60,8 +60,8 @@ public class FindCityActivity extends AppCompatActivity {
         mInputEdt = (EditText) findViewById(R.id.edt_input);
         mResultAddressLv = (ListView) findViewById(R.id.lv_result);
         mHistoryAddressLv = (ListView) findViewById(R.id.lv_history_result);
-        mResultAdapter = new AddressAdapter(this, mSearchResult);
-        mHistoryAdapter = new AddressAdapter(this, mSearchHistory);
+        mResultAdapter = new AddressAdapter(this, mSearchResult,0);
+        mHistoryAdapter = new AddressAdapter(this, mSearchHistory,1);
         mResultAddressLv.setAdapter(mResultAdapter);
         mHistoryAddressLv.setAdapter(mHistoryAdapter);
         changeContentShow(true);
@@ -94,6 +94,8 @@ public class FindCityActivity extends AppCompatActivity {
                     Toast.makeText(FindCityActivity.this, "搜索地址不能为空", Toast.LENGTH_SHORT).show();
                     return;
                 }
+                AddressInfo info = new AddressInfo(inputTxt, inputTxt);
+                info.save();
                 Intent intent = getIntent();
                 intent.putExtra("cityName", inputTxt);
                 intent.putExtra("address", inputTxt);

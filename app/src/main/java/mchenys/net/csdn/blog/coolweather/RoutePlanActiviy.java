@@ -64,11 +64,11 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
     private String endCityName, endPlaceName;
     private RoutePlanSearch mSearch;
     private boolean isSameCity;//是否是同城,跨域交通用到
-    private String myCityName, myPlaceName;
+    //    private String myCityName, myPlaceName;
     private GeoCoder mGeoCoder;
-    private LatLng mSuggestStartLatLng, mSuggestEndLatLng;
+    private LatLng mStartLatLng, mEndLatLng;
     private RouteLineSuggestAdapter mSuggestAdapter;
-    //0:建议列表表示起始点地理编码查询,1:建议列表表示终点地理编码查询,2:表示非建议列表表示起始点地理编码查询,3:非建议列表表示终点地理编码查询,4:重置其起始点和终点地理编码为当前位置
+    //0:建议列表表示起始点地理编码查询,1:建议列表表示终点地理编码查询,2:表示非建议列表表示起始点地理编码查询,3:非建议列表表示终点地理编码查询
     private int mGeoCoderType;
 
     @Override
@@ -77,8 +77,8 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
         setContentView(R.layout.activity_roue_plan);
         initSearch();
         initView();
-        initData();
         initListener();
+        initData();
     }
 
     private void initSearch() {
@@ -104,17 +104,24 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
         mTabLayout = (TabLayout) findViewById(R.id.tabLayout);
         mSearchTv = (TextView) findViewById(R.id.tv_search);
         mSuggestTv = (TextView) findViewById(R.id.tv_suggest_info);
-    }
-
-    private void initData() {
         for (int i = 0; i < title.length; i++) {
             mTabLayout.addTab(mTabLayout.newTab().setText(title[i]));
         }
-        myCityName = getIntent().getStringExtra("cityName");
-        myPlaceName = getIntent().getStringExtra("address");
-        endCityName = startCityName = myCityName;
-        endPlaceName = startPlaceName = myPlaceName;
-        startGeoCode(4);
+    }
+
+    private void initData() {
+        mStartLatLng = getIntent().getParcelableExtra("startLatlng");
+        mEndLatLng = getIntent().getParcelableExtra("endLatlng");
+        startCityName = getIntent().getStringExtra("cityName");
+        nowSearchType = getIntent().getIntExtra("nowSearchType", 0);
+        boolean isAutoSearch = getIntent().getBooleanExtra("isAutoSearch", false);
+        if (isAutoSearch) {
+            String startNodeName = getIntent().getStringExtra("startNodeName");
+            String endNodeName = getIntent().getStringExtra("endNodeName");
+            mStartNodeTv.setText(startNodeName);
+            mEndNodeTv.setText(endNodeName);
+            searchRoute();
+        }
     }
 
 
@@ -151,41 +158,7 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
             @Override
             public void onClick(View v) {
                 if (checkValue()) {
-                    showProgressDialog();
-                    // 处理搜索按钮响应
-                    // 设置起终点信息，对于tranist search 来说，城市名无意义
-                    PlanNode stNode = null;
-                    PlanNode enNode = null;
-                    if (null != mSuggestStartLatLng) {
-                        stNode = PlanNode.withLocation(mSuggestStartLatLng);
-                    } else {
-                        stNode = PlanNode.withCityNameAndPlaceName(startCityName, startPlaceName);
-                    }
-                    if (null != mSuggestEndLatLng) {
-                        enNode = PlanNode.withLocation(mSuggestEndLatLng);
-                    } else {
-                        enNode = PlanNode.withCityNameAndPlaceName(endCityName, endPlaceName);
-                    }
-
-                    Log.d(TAG, "#start search->startCityName:" + startCityName + " startPlaceName:" + startPlaceName + " endCityName:" + endCityName + " endPlaceName:" + endPlaceName);
-
-                    switch (nowSearchType) {
-                        case RouteType.MASS_TRANSIT_ROUTE:
-                            mSearch.masstransitSearch(new MassTransitRoutePlanOption().from(stNode).to(enNode));
-                            break;
-                        case RouteType.DRIVING_ROUTE:
-                            mSearch.drivingSearch((new DrivingRoutePlanOption()).from(stNode).to(enNode));
-                            break;
-                        case RouteType.TRANSIT_ROUTE:
-                            mSearch.transitSearch((new TransitRoutePlanOption()).from(stNode).city(startCityName).to(enNode));
-                            break;
-                        case RouteType.WALKING_ROUTE:
-                            mSearch.walkingSearch((new WalkingRoutePlanOption()).from(stNode).to(enNode));
-                            break;
-                        case RouteType.BIKING_ROUTE:
-                            mSearch.bikingSearch((new BikingRoutePlanOption()).from(stNode).to(enNode));
-                            break;
-                    }
+                    searchRoute();
                 }
             }
         });
@@ -194,6 +167,7 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 BaseAdapter adapter = (BaseAdapter) parent.getAdapter();
                 if (adapter instanceof RouteLineAdapter) {
+                    //显示在地图
                     RouteLine routeLine = (RouteLine) parent.getItemAtPosition(position);
                     showRouteLineByMap(routeLine, position + 1);
                 } else if (adapter instanceof RouteLineSuggestAdapter) {
@@ -219,12 +193,52 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
 
     }
 
+    /**
+     * 开始路线搜索
+     */
+    private void searchRoute() {
+        showProgressDialog();
+        PlanNode stNode = PlanNode.withLocation(mStartLatLng);
+        PlanNode enNode = PlanNode.withLocation(mEndLatLng);
+
+        Log.d(TAG, "#start search->startCityName:" + startCityName + " startPlaceName:" + startPlaceName + " endCityName:" + endCityName + " endPlaceName:" + endPlaceName);
+
+        switch (nowSearchType) {
+            case RouteType.MASS_TRANSIT_ROUTE:
+                mSearch.masstransitSearch(new MassTransitRoutePlanOption().from(stNode).to(enNode));
+                break;
+            case RouteType.DRIVING_ROUTE:
+                mSearch.drivingSearch((new DrivingRoutePlanOption()).from(stNode).to(enNode));
+                break;
+            case RouteType.TRANSIT_ROUTE:
+                mSearch.transitSearch((new TransitRoutePlanOption()).from(stNode).city(startCityName).to(enNode));
+                break;
+            case RouteType.WALKING_ROUTE:
+                mSearch.walkingSearch((new WalkingRoutePlanOption()).from(stNode).to(enNode));
+                break;
+            case RouteType.BIKING_ROUTE:
+                mSearch.bikingSearch((new BikingRoutePlanOption()).from(stNode).to(enNode));
+                break;
+        }
+    }
+
+    /**
+     * 在地图上显示路线
+     *
+     * @param routeLine
+     * @param linePosition
+     */
     private void showRouteLineByMap(RouteLine routeLine, int linePosition) {
         Intent intent = getIntent();
         intent.putExtra("routeLine", routeLine);
         intent.putExtra("nowSearchType", nowSearchType);
         intent.putExtra("isSameCity", isSameCity);
         intent.putExtra("linePosition", linePosition);
+        intent.putExtra("startLatlng", mStartLatLng);
+        intent.putExtra("endLatlng", mEndLatLng);
+        intent.putExtra("startCityName", startCityName);
+        intent.putExtra("startNodeName", mStartNodeTv.getText().toString().trim());
+        intent.putExtra("endNodeName", mEndNodeTv.getText().toString().trim());
         setResult(RESULT_OK, intent);
         finish();
     }
@@ -248,31 +262,25 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
         Log.d(TAG, "地理编码成功");
         switch (mGeoCoderType) {
             case 0://建议起点
-                mSuggestStartLatLng = new LatLng(result.getLocation().latitude, result.getLocation().longitude);
+                mStartLatLng = new LatLng(result.getLocation().latitude, result.getLocation().longitude);
                 mSuggestAdapter.resetData(SuggestAddressInfo.endNodeList);
                 mRoutePlanLv.setVisibility(View.VISIBLE);
-                Log.d(TAG, "#start search->起点维度:" + mSuggestStartLatLng.latitude + " 起点经度:" + mSuggestStartLatLng.longitude);
+                Log.d(TAG, "#start search->起点维度:" + mStartLatLng.latitude + " 起点经度:" + mStartLatLng.longitude);
 
                 break;
             case 1://建议终点
-                mSuggestEndLatLng = new LatLng(result.getLocation().latitude, result.getLocation().longitude);
+                mEndLatLng = new LatLng(result.getLocation().latitude, result.getLocation().longitude);
                 mRoutePlanLv.setVisibility(View.GONE);
-                Log.d(TAG, "#start search->终点维度:" + mSuggestEndLatLng.latitude + " 终点经度:" + mSuggestEndLatLng.longitude);
+                Log.d(TAG, "#start search->终点维度:" + mEndLatLng.latitude + " 终点经度:" + mEndLatLng.longitude);
 
                 break;
             case 2://非建议起点
-                mSuggestStartLatLng = new LatLng(result.getLocation().latitude, result.getLocation().longitude);
-                Log.d(TAG, "#start search->起点维度:" + mSuggestStartLatLng.latitude + " 起点经度:" + mSuggestStartLatLng.longitude);
-
-            case 3://非建议终点
-                mSuggestEndLatLng = new LatLng(result.getLocation().latitude, result.getLocation().longitude);
-                Log.d(TAG, "#start search->终点维度:" + mSuggestEndLatLng.latitude + " 终点经度:" + mSuggestEndLatLng.longitude);
-
+                mStartLatLng = new LatLng(result.getLocation().latitude, result.getLocation().longitude);
+                Log.d(TAG, "#start search->起点维度:" + mStartLatLng.latitude + " 起点经度:" + mStartLatLng.longitude);
                 break;
-            case 4://重置起始点和终点为当前位置
-                mSuggestStartLatLng = new LatLng(result.getLocation().latitude, result.getLocation().longitude);
-                mSuggestEndLatLng = mSuggestStartLatLng;
-                Log.d(TAG, "#start search->重置起点和终点维度:" + mSuggestEndLatLng.latitude + " 重置起点和终点经度:" + mSuggestEndLatLng.longitude);
+            case 3://非建议终点
+                mEndLatLng = new LatLng(result.getLocation().latitude, result.getLocation().longitude);
+                Log.d(TAG, "#start search->终点维度:" + mEndLatLng.latitude + " 终点经度:" + mEndLatLng.longitude);
 
                 break;
         }
@@ -315,9 +323,9 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
             Toast.makeText(RoutePlanActiviy.this, "请输入终点位置", Toast.LENGTH_SHORT).show();
             return false;
         }
-        if (null != mSuggestStartLatLng && null != mSuggestEndLatLng &&
-                mSuggestStartLatLng.latitude == mSuggestEndLatLng.latitude &&
-                mSuggestStartLatLng.longitude == mSuggestEndLatLng.longitude) {
+        if (null != mStartLatLng && null != mEndLatLng &&
+                mStartLatLng.latitude == mEndLatLng.latitude &&
+                mStartLatLng.longitude == mEndLatLng.longitude) {
             Toast.makeText(RoutePlanActiviy.this, "起点位置和终点位置相同或接近", Toast.LENGTH_SHORT).show();
             return false;
         }
@@ -330,8 +338,6 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
             Toast.makeText(RoutePlanActiviy.this, "抱歉，未找到结果", Toast.LENGTH_SHORT).show();
             closeProgressDialog();
         }
-        mSuggestEndLatLng = null;
-        mSuggestEndLatLng = null;
         if (result.error == SearchResult.ERRORNO.AMBIGUOUS_ROURE_ADDR) {
             // 起终点模糊，获取建议列表
             SuggestAddrInfo suggestAddrInfo = result.getSuggestAddrInfo();
@@ -535,24 +541,20 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
                     startPlaceName = data.getStringExtra("address");
                     if ("我的位置".equals(startCityName)) {
                         mStartNodeTv.setText("我的位置");
-                        startCityName = myCityName;
-                        startPlaceName = myPlaceName;
                     } else {
                         mStartNodeTv.setText(startCityName + " " + startPlaceName);
+                        startGeoCode(2);
                     }
-                    startGeoCode(2);
                     break;
                 case 1:
                     endCityName = data.getStringExtra("cityName");
                     endPlaceName = data.getStringExtra("address");
                     if ("我的位置".equals(endCityName)) {
                         mEndNodeTv.setText("我的位置");
-                        endCityName = myCityName;
-                        endPlaceName = myPlaceName;
                     } else {
                         mEndNodeTv.setText(endCityName + " " + endPlaceName);
+                        startGeoCode(3);
                     }
-                    startGeoCode(3);
                     break;
             }
         }
