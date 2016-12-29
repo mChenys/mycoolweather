@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<android.support.v4.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
-                                        xmlns:app="http://schemas.android.com/apk/res-auto"
-                                        android:layout_width="match_parent"
-                                        android:layout_height="match_parent"
-                                        android:fitsSystemWindows="true"
-                                        android:orientation="vertical">
+<android.support.v4.widget.DrawerLayout
+    android:id="@+id/drawer_layout"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    >
 
     <!--主界面-->
     <FrameLayout
@@ -27,6 +29,29 @@
             android:layout_gravity="bottom|right"
             android:layout_marginBottom="100dp"
             android:background="@drawable/selector_route"/>
+
+        <FrameLayout
+            android:id="@+id/fl_mode_layout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|left"
+            android:layout_marginBottom="50dp"
+            android:background="@drawable/bmskin_main_icon_bg_normal">
+
+            <CheckBox
+                android:id="@+id/cb_mode"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:background="@drawable/selector_follow_compass_change"
+                android:button="@null"/>
+
+            <ImageView
+                android:id="@+id/iv_no_mode"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:background="@drawable/bmskin_main_icon_location"/>
+        </FrameLayout>
+
 
         <LinearLayout
             android:id="@+id/ll_step"
@@ -64,6 +89,7 @@
             android:background="@drawable/icon_step_back_right"/>
 
         <LinearLayout
+            android:id="@+id/ll_titlebar"
             android:layout_width="match_parent"
             android:layout_height="?attr/actionBarSize"
             android:background="#4000"
@@ -71,17 +97,19 @@
             android:orientation="horizontal">
 
             <ImageButton
+                android:id="@+id/ib_back"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@drawable/ic_back"/>
 
             <TextView
+                android:id="@+id/tv_bus_search"
                 android:layout_width="0dp"
-                android:layout_weight="1"
                 android:layout_height="match_parent"
                 android:layout_gravity="center"
                 android:layout_marginBottom="10dp"
                 android:layout_marginTop="10dp"
+                android:layout_weight="1"
                 android:background="@drawable/shape_stroke_oval"
                 android:gravity="center_vertical"
                 android:hint="公交路线"
@@ -90,9 +118,10 @@
                 android:textSize="16sp"/>
 
             <ImageButton
-                android:src="@drawable/ic_setting"
+                android:id="@+id/ib_setting"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"/>
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_setting"/>
 
         </LinearLayout>
     </FrameLayout>
@@ -102,5 +131,6 @@
         layout="@layout/layout_map_right_setting"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_gravity="end"/>
+        android:layout_gravity="end"
+        android:layout_marginLeft="50dp"/>
 </android.support.v4.widget.DrawerLayout>

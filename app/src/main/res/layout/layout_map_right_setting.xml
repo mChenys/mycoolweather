@@ -16,13 +16,13 @@
             android:id="@+id/ll_layer_wx"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginRight="5dp"
+            android:layout_marginRight="10dp"
             android:gravity="center"
             android:orientation="vertical">
 
             <ImageView
-                android:layout_width="70dp"
-                android:layout_height="60dp"
+                android:layout_width="60dp"
+                android:layout_height="30dp"
                 android:scaleType="centerCrop"
                 android:src="@drawable/bg_wx"/>
 
@@ -32,20 +32,20 @@
                 android:layout_marginTop="10dp"
                 android:text="卫星图"
                 android:textColor="#000"
-                android:textSize="16sp"/>
+                android:textSize="14sp"/>
         </LinearLayout>
 
         <LinearLayout
             android:id="@+id/ll_layer_2d"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginRight="5dp"
+            android:layout_marginRight="10dp"
             android:gravity="center"
             android:orientation="vertical">
 
             <ImageView
-                android:layout_width="80dp"
-                android:layout_height="60dp"
+                android:layout_width="60dp"
+                android:layout_height="30dp"
                 android:scaleType="centerCrop"
                 android:src="@drawable/bg_2d"/>
 
@@ -55,7 +55,7 @@
                 android:layout_marginTop="10dp"
                 android:text="2D平面图"
                 android:textColor="#000"
-                android:textSize="16sp"/>
+                android:textSize="14sp"/>
         </LinearLayout>
 
         <LinearLayout
@@ -66,8 +66,8 @@
             android:orientation="vertical">
 
             <ImageView
-                android:layout_width="80dp"
-                android:layout_height="60dp"
+                android:layout_width="60dp"
+                android:layout_height="30dp"
                 android:scaleType="centerCrop"
                 android:src="@drawable/bg_3d"/>
 
@@ -77,7 +77,7 @@
                 android:layout_marginTop="10dp"
                 android:text="3D俯视图"
                 android:textColor="#000"
-                android:textSize="16sp"/>
+                android:textSize="14sp"/>
         </LinearLayout>
     </LinearLayout>
 
@@ -110,6 +110,7 @@
                 android:textSize="18sp"/>
 
             <CheckBox
+                android:id="@+id/cb_personal_map"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentRight="true"
@@ -134,6 +135,7 @@
                 android:textSize="18sp"/>
 
             <CheckBox
+                android:id="@+id/cb_real_route"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentRight="true"
@@ -158,6 +160,7 @@
                 android:textSize="18sp"/>
 
             <CheckBox
+                android:id="@+id/cb_hot_map"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentRight="true"

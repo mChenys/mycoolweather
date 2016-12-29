@@ -2,20 +2,23 @@ package mchenys.net.csdn.blog.coolweather;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
+import android.support.v4.view.GravityCompat;
+import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
 import android.text.TextUtils;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
-import android.view.Menu;
-import android.view.MenuItem;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewTreeObserver;
 import android.widget.AdapterView;
-import android.widget.Button;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.FrameLayout;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -32,6 +35,7 @@ import com.baidu.mapapi.map.BaiduMap;
 import com.baidu.mapapi.map.InfoWindow;
 import com.baidu.mapapi.map.MapPoi;
 import com.baidu.mapapi.map.MapStatus;
+import com.baidu.mapapi.map.MapStatusUpdate;
 import com.baidu.mapapi.map.MapStatusUpdateFactory;
 import com.baidu.mapapi.map.MapView;
 import com.baidu.mapapi.map.Marker;
@@ -72,26 +76,32 @@ import mchenys.net.csdn.blog.coolweather.mapapi.overlayutil.WalkingRouteOverlay;
  */
 public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderResultListener {
     private static final String TAG = "BDMapActivity";
+    private static final int REQ_SEARCH_BUSLINE = 200;
+    private static final int REQ_SEARCH_ROUTE = 100;
     private MapView mMapView;
-    private Toolbar mToolbar;
     private boolean isFirstLoc;
-    private MenuItem mTrafficItem, mHeatItem;
-    private Button mChangeMarkerBtn;
     private ImageButton mRouteIb;
     private String startCityName, startPlaceName, mStartNodeName, mEndNodeName;
     private LinearLayout mStepLayout;//显示所有路线步骤的布局
+    private FrameLayout mModeLayout;//地图模式(普通,跟随,罗盘)跟布局
     private TextView mStepDescTv;
     private ListView mRouteStepLv;//显示节点的ListView
     private int mContentHeight;
     private FrameLayout mContentFl;
     private ImageView mStepBackIv;
-    //指针的类型,普通,跟随,罗盘
-    private MyLocationConfiguration.LocationMode mCurrentMode = MyLocationConfiguration.LocationMode.NORMAL;
+    private ImageButton mBackIb, mSettingIb;
+    private TextView mBusSearchTv;
+    private LinearLayout mTitleBarLl;
+    private DrawerLayout mDrawerLayout;
+    private LinearLayout mWXLayerLl, m2DLayerLl, m3DLayerLl;
+    private CheckBox mPersonalMapCb, mRealRouteCb, mHotMapCb, mModeCb;
+    private ImageView mNoModeIv;
     private LocationClient mLocationClient;
     private BaiduMap mBaiduMap;
     private GeoCoder mGeoCoder;
     private LatLng mStartLatLng, mEndLatLng;
     private int nowSearchType;
+    private boolean isOpenLocation;//是否开启自动定位
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -101,18 +111,20 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
         initView();
         requestLocation();
         initListener();
+        setLayerByPosition();
+        setMapSettingByLastSave();
     }
 
 
     private void initView() {
+        mDrawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
         mContentFl = (FrameLayout) findViewById(R.id.fl_content);
         mMapView = (MapView) findViewById(R.id.bmapView);
         mBaiduMap = mMapView.getMap();
-        mToolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(mToolbar);
-        mToolbar.setNavigationIcon(R.drawable.ic_back);
-        mChangeMarkerBtn = (Button) findViewById(R.id.btn_chg_marker);
-        mChangeMarkerBtn.setOnClickListener(mChangeMarkerListener);
+        mBusSearchTv = (TextView) findViewById(R.id.tv_bus_search);
+        mBackIb = (ImageButton) findViewById(R.id.ib_back);
+        mSettingIb = (ImageButton) findViewById(R.id.ib_setting);
+        mTitleBarLl = (LinearLayout) findViewById(R.id.ll_titlebar);
         mStepLayout = (LinearLayout) findViewById(R.id.ll_step);
         mStepDescTv = (TextView) findViewById(R.id.tv_step_desc);
         mRouteStepLv = (ListView) findViewById(R.id.lv_node_step);
@@ -120,6 +132,17 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
         mRouteIb = (ImageButton) findViewById(R.id.ib_route);
         mStepBackIv = (ImageView) findViewById(R.id.iv_step_back);
         mStepBackIv.setVisibility(View.GONE);
+        mWXLayerLl = (LinearLayout) findViewById(R.id.ll_layer_wx);
+        m2DLayerLl = (LinearLayout) findViewById(R.id.ll_layer_2d);
+        m3DLayerLl = (LinearLayout) findViewById(R.id.ll_layer_3d);
+        mPersonalMapCb = (CheckBox) findViewById(R.id.cb_personal_map);
+        mRealRouteCb = (CheckBox) findViewById(R.id.cb_real_route);
+        mHotMapCb = (CheckBox) findViewById(R.id.cb_hot_map);
+        mModeCb = (CheckBox) findViewById(R.id.cb_mode);
+        mModeLayout = (FrameLayout) findViewById(R.id.fl_mode_layout);
+        mNoModeIv = (ImageView) findViewById(R.id.iv_no_mode);
+        mNoModeIv.setVisibility(View.VISIBLE);
+        mModeCb.setVisibility(View.GONE);
         setMapBottomMargin(0);
 
     }
@@ -127,13 +150,15 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
     private void setMapBottomMargin(int value) {
         if (value == 0) {
             mRouteIb.setVisibility(View.VISIBLE);
-            mToolbar.setVisibility(View.VISIBLE);
+            mTitleBarLl.setVisibility(View.VISIBLE);
+            mModeLayout.setVisibility(View.VISIBLE);
             //隐藏节点详情
             mStepLayout.setVisibility(View.GONE);
             mStepBackIv.setVisibility(View.GONE);
         } else {
-            mToolbar.setVisibility(View.GONE);
+            mTitleBarLl.setVisibility(View.GONE);
             mRouteIb.setVisibility(View.GONE);
+            mModeLayout.setVisibility(View.GONE);
             mStepLayout.setVisibility(View.VISIBLE);
             mStepBackIv.setVisibility(View.VISIBLE);
         }
@@ -148,7 +173,7 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
         mLocationClient = new LocationClient(getApplicationContext());
         mLocationClient.registerLocationListener(new MyLocationListener());
         LocationClientOption option = new LocationClientOption();
-        option.setScanSpan(5000);//设置刷新间隔
+        option.setScanSpan(1000);//设置刷新间隔
         option.setCoorType("bd09ll"); // 设置坐标类型为百度坐标系统
         option.setIsNeedAddress(true);//需要获取当前位置的详细地址
         option.setLocationMode(LocationClientOption.LocationMode.Hight_Accuracy);//高精度模式(gps/wifi/蓝牙/网络方式定位)
@@ -161,14 +186,14 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
 
     }
 
-    private boolean isOpen;
+    private boolean isOpenSetpLayout;
 
     private void initListener() {
         // 地图点击事件处理
         mBaiduMap.setOnMapClickListener(new BaiduMap.OnMapClickListener() {
             @Override
             public void onMapClick(LatLng latLng) {
-                mBaiduMap.hideInfoWindow();//清楚地图弹出物
+                mBaiduMap.hideInfoWindow();//清除地图弹出物
             }
 
             @Override
@@ -186,6 +211,27 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
                 return true;
             }
         });
+        //触摸地图
+        mBaiduMap.setOnMapTouchListener(new BaiduMap.OnMapTouchListener() {
+            @Override
+            public void onTouch(MotionEvent motionEvent) {
+                mNoModeIv.setVisibility(View.VISIBLE);
+                mModeCb.setVisibility(View.GONE);
+                isOpenLocation = false;
+            }
+        });
+        //点击当前位置切换为跟随模式
+        mNoModeIv.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mNoModeIv.setVisibility(View.GONE);
+                mModeCb.setVisibility(View.VISIBLE);
+                isOpenLocation = true;
+                mModeCb.setChecked(false);
+                mBaiduMap.setMyLocationConfigeration(new MyLocationConfiguration(MyLocationConfiguration.LocationMode.FOLLOWING , true, null));
+                m2DLayerLl.performClick();
+            }
+        });
         mStepBackIv.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -198,9 +244,7 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
                 intent.putExtra("isAutoSearch", true);
                 intent.putExtra("startNodeName", mStartNodeName);
                 intent.putExtra("endNodeName", mEndNodeName);
-                startActivityForResult(intent, 100, null);
-
-
+                startActivityForResult(intent, REQ_SEARCH_ROUTE, null);
                 setMapBottomMargin(0);
             }
         });
@@ -224,8 +268,7 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
                 intent.putExtra("endLatlng", mStartLatLng);
                 intent.putExtra("cityName", startCityName);
                 intent.putExtra("nowSearchType", nowSearchType);
-//                intent.putExtra("address", startPlaceName);
-                startActivityForResult(intent, 100, null);
+                startActivityForResult(intent, REQ_SEARCH_ROUTE, null);
             }
         });
         mStepLayout.setOnClickListener(new View.OnClickListener() {
@@ -233,26 +276,150 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
             public void onClick(View v) {
                 FrameLayout.LayoutParams flp = (FrameLayout.LayoutParams) mStepLayout.getLayoutParams();
                 flp.gravity = Gravity.BOTTOM;
-                if (!isOpen) {
-                    isOpen = !isOpen;
+                if (!isOpenSetpLayout) {
+                    isOpenSetpLayout = !isOpenSetpLayout;
                     flp.height = mContentHeight * 1 / 2;//打开
 
                 } else {
-                    isOpen = !isOpen;
+                    isOpenSetpLayout = !isOpenSetpLayout;
                     flp.height = mContentHeight * 1 / 4;//关闭
                 }
-                mStepDescTv.setSelected(isOpen);//打开:右边箭头向下,关闭:右边箭头向上
+                mStepDescTv.setSelected(isOpenSetpLayout);//打开:右边箭头向下,关闭:右边箭头向上
                 mStepLayout.setLayoutParams(flp);
                 setMapBottomMargin(flp.height);
 
             }
         });
-        mToolbar.setNavigationOnClickListener(new View.OnClickListener() {
+        mBackIb.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 finish();
             }
         });
+        mSettingIb.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mDrawerLayout.openDrawer(GravityCompat.END);
+            }
+        });
+        mBusSearchTv.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(BDMapActivity.this, BusLineSearchActivity.class);
+                startActivityForResult(intent, REQ_SEARCH_BUSLINE, null);
+            }
+        });
+        mWXLayerLl.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mDrawerLayout.closeDrawers();
+                //卫星地图
+                mBaiduMap.setMapType(BaiduMap.MAP_TYPE_SATELLITE);
+                saveLayerPosition(1);
+            }
+        });
+        m2DLayerLl.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mDrawerLayout.closeDrawers();
+                //2D平面图
+                mBaiduMap.setMapType(BaiduMap.MAP_TYPE_NORMAL);
+                MapStatus ms = new MapStatus.Builder(mBaiduMap.getMapStatus()).overlook(0).build();
+                MapStatusUpdate u = MapStatusUpdateFactory.newMapStatus(ms);
+                mBaiduMap.animateMapStatus(u);
+                saveLayerPosition(2);
+            }
+        });
+        m3DLayerLl.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mDrawerLayout.closeDrawers();
+                mBaiduMap.setMapType(BaiduMap.MAP_TYPE_NORMAL);
+                MapStatus ms = new MapStatus.Builder(mBaiduMap.getMapStatus()).overlook(-45).build();
+                MapStatusUpdate u = MapStatusUpdateFactory.newMapStatus(ms);
+                mBaiduMap.animateMapStatus(u);
+                saveLayerPosition(3);
+
+            }
+        });
+        mPersonalMapCb.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                mDrawerLayout.closeDrawers();
+                MapView.setMapCustomEnable(isChecked);
+                saveMapSetting("isPersonal", isChecked);
+            }
+        });
+        mRealRouteCb.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                mDrawerLayout.closeDrawers();
+                mBaiduMap.setTrafficEnabled(isChecked);
+                saveMapSetting("isRealRoute", isChecked);
+            }
+        });
+        mHotMapCb.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                mDrawerLayout.closeDrawers();
+                mBaiduMap.setBaiduHeatMapEnabled(isChecked);
+                saveMapSetting("isHotMap", isChecked);
+            }
+        });
+        //跟随/罗盘模式切换
+        mModeCb.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                isOpenLocation = true;
+                MyLocationConfiguration.LocationMode mode = isChecked ? MyLocationConfiguration.LocationMode.COMPASS : MyLocationConfiguration.LocationMode.FOLLOWING;
+                mBaiduMap.setMyLocationConfigeration(new MyLocationConfiguration(mode, true, null));
+                if (!isChecked) {
+                    m2DLayerLl.performClick();
+                }
+            }
+        });
+    }
+
+    private void saveLayerPosition(int position) {
+        SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(BDMapActivity.this).edit();
+        editor.putInt("layerPosition", position);
+        editor.apply();
+    }
+
+    private void saveMapSetting(String key, boolean value) {
+        SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(BDMapActivity.this).edit();
+        editor.putBoolean(key, value);
+        editor.apply();
+    }
+
+    private void setLayerByPosition() {
+        int position = PreferenceManager.getDefaultSharedPreferences(this).getInt("layerPosition", 2);
+        switch (position) {
+            case 1://卫星图
+                mBaiduMap.setMapType(BaiduMap.MAP_TYPE_SATELLITE);
+                break;
+            case 2://2d平面图
+                mBaiduMap.setMapType(BaiduMap.MAP_TYPE_NORMAL);
+                MapStatus ms = new MapStatus.Builder(mBaiduMap.getMapStatus()).overlook(0).build();
+                MapStatusUpdate u = MapStatusUpdateFactory.newMapStatus(ms);
+                mBaiduMap.animateMapStatus(u);
+                break;
+            case 3://3d俯视图
+                mBaiduMap.setMapType(BaiduMap.MAP_TYPE_NORMAL);
+                MapStatus mss = new MapStatus.Builder(mBaiduMap.getMapStatus()).overlook(-45).build();
+                MapStatusUpdate uu = MapStatusUpdateFactory.newMapStatus(mss);
+                mBaiduMap.animateMapStatus(uu);
+                break;
+        }
+    }
+
+    private void setMapSettingByLastSave() {
+        boolean isPersonal = PreferenceManager.getDefaultSharedPreferences(this).getBoolean("isPersonal", false);
+        boolean isRealRoute = PreferenceManager.getDefaultSharedPreferences(this).getBoolean("isRealRoute", false);
+        boolean isHotMap = PreferenceManager.getDefaultSharedPreferences(this).getBoolean("isHotMap", false);
+        mPersonalMapCb.setChecked(isPersonal);
+        mRealRouteCb.setChecked(isRealRoute);
+        mHotMapCb.setChecked(isHotMap);
     }
 
     /**
@@ -261,20 +428,29 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
      * @param location
      */
     private void navigateTo(BDLocation location) {
-        MyLocationData locData = new MyLocationData.Builder()
-                .accuracy(location.getRadius())
-                // 此处设置开发者获取到的方向信息，顺时针0-360
-                .direction(100).latitude(location.getLatitude())
-                .longitude(location.getLongitude()).build();
-        mBaiduMap.setMyLocationData(locData);
         if (!isFirstLoc) {
+            //首次进来定位
             isFirstLoc = true;
-            LatLng ll = new LatLng(location.getLatitude(),
-                    location.getLongitude());
+            LatLng ll = new LatLng(location.getLatitude(), location.getLongitude());
             MapStatus.Builder builder = new MapStatus.Builder();
-            builder.target(ll).zoom(16.0f);
+            builder.target(ll).zoom(18.0f);
             mBaiduMap.animateMapStatus(MapStatusUpdateFactory.newMapStatus(builder.build()));
+            MyLocationData locData = new MyLocationData.Builder()
+                    .accuracy(location.getRadius())
+                    .direction(100).latitude(location.getLatitude())
+                    .longitude(location.getLongitude()).build();
+            mBaiduMap.setMyLocationData(locData);
         }
+        if (isOpenLocation) {
+            //实时跟随定位
+            MyLocationData locData = new MyLocationData.Builder()
+                    .accuracy(location.getRadius())
+                    // 此处设置开发者获取到的方向信息，顺时针0-360
+                    .direction(100).latitude(location.getLatitude())
+                    .longitude(location.getLongitude()).build();
+            mBaiduMap.setMyLocationData(locData);
+        }
+        Log.d(TAG, isOpenLocation ? "开启自动定位" : "关闭自动定位");
         mStartLatLng = new LatLng(location.getLatitude(), location.getLongitude());
         startCityName = location.getCity();
 //        startPlaceName = location.getDistrict() + location.getStreet();
@@ -298,81 +474,6 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
         }
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        menu.add(0, 0, 0, "普通地图");
-        menu.add(0, 1, 1, "卫星地图");
-        menu.add(0, 2, 2, "个性化地图");
-        mTrafficItem = menu.add(0, 3, 3, "开启实时交通图");
-        mHeatItem = menu.add(0, 4, 4, "开启城市热力图");
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-
-            case 0:
-                //普通地图
-                MapView.setMapCustomEnable(false);
-                mBaiduMap.setMapType(BaiduMap.MAP_TYPE_NORMAL);
-                break;
-            case 1:
-                //卫星地图
-                mBaiduMap.setMapType(BaiduMap.MAP_TYPE_SATELLITE);
-                break;
-            case 2:
-                //开启个性化地图
-                MapView.setMapCustomEnable(true);
-                break;
-            case 3:
-                //开启交通图
-                if (mTrafficItem.getTitle().equals("开启实时交通图")) {
-                    mBaiduMap.setTrafficEnabled(true);
-                    mTrafficItem.setTitle("关闭实时交通图");
-                } else {
-                    mBaiduMap.setTrafficEnabled(false);
-                    mTrafficItem.setTitle("开启实时交通图");
-                }
-                break;
-
-            case 4:
-                //显示百度热力图
-                if (mHeatItem.getTitle().equals("开启热力图")) {
-                    mBaiduMap.setBaiduHeatMapEnabled(true);
-                    mHeatItem.setTitle("关闭热力图");
-                } else {
-                    mBaiduMap.setBaiduHeatMapEnabled(false);
-                    mHeatItem.setTitle("开启热力图");
-                }
-                break;
-        }
-        return true;
-    }
-
-    public View.OnClickListener mChangeMarkerListener = new View.OnClickListener() {
-        public void onClick(View v) {
-            switch (mCurrentMode) {
-                case NORMAL:
-                    mChangeMarkerBtn.setText("跟随");
-                    mCurrentMode = MyLocationConfiguration.LocationMode.FOLLOWING;
-                    mBaiduMap.setMyLocationConfigeration(new MyLocationConfiguration(mCurrentMode, true, null));
-                    break;
-                case COMPASS:
-                    mChangeMarkerBtn.setText("普通");
-                    mCurrentMode = MyLocationConfiguration.LocationMode.NORMAL;
-                    mBaiduMap.setMyLocationConfigeration(new MyLocationConfiguration(mCurrentMode, true, null));
-                    break;
-                case FOLLOWING:
-                    mChangeMarkerBtn.setText("罗盘");
-                    mCurrentMode = MyLocationConfiguration.LocationMode.COMPASS;
-                    mBaiduMap.setMyLocationConfigeration(new MyLocationConfiguration(mCurrentMode, true, null));
-                    break;
-                default:
-                    break;
-            }
-        }
-    };
 
     @Override
     protected void onResume() {
@@ -436,7 +537,7 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (RESULT_OK == resultCode && 100 == requestCode) {
+        if (RESULT_OK == resultCode && REQ_SEARCH_ROUTE == requestCode) {
             int linePosition = data.getIntExtra("linePosition", 1);
             boolean isSameCity = data.getBooleanExtra("isSameCity", false);//是否是同城,跨域交通用到
             RouteLine routeLine = data.getParcelableExtra("routeLine");

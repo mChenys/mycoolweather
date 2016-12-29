@@ -16,8 +16,19 @@
             android:layout_height="?attr/actionBarSize"
             android:background="@color/colorPrimary"
             app:layout_scrollFlags="scroll|enterAlways"
-            app:titleTextColor="#fff"
-            app:title="公交路线搜索"/>
+            app:title="公交路线搜索"
+            app:titleTextColor="#fff">
+
+            <Button
+                android:id="@+id/btn_search"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="right"
+                android:background="@null"
+                android:text="搜索"
+                android:textColor="#fff"
+                android:textSize="20sp"/>
+        </android.support.v7.widget.Toolbar>
 
         <include layout="@layout/layout_bus_search_header"/>
 
