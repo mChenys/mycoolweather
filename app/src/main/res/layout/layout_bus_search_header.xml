@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="60dp"
+    android:background="@color/colorPrimary"
+    android:gravity="center_vertical">
+
+    <Spinner
+        android:id="@+id/sp_province"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:dropDownVerticalOffset="45dp"
+        android:popupBackground="#5000"
+        android:spinnerMode="dropdown"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="5dp"
+        android:text="省"
+        android:textColor="#fff"
+        android:textSize="16sp"/>
+
+    <Spinner
+        android:id="@+id/sp_city"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:dropDownVerticalOffset="45dp"
+        android:popupBackground="#5000"
+        android:spinnerMode="dropdown"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="5dp"
+        android:text="市"
+        android:textColor="#fff"
+        android:textSize="16sp"/>
+
+    <EditText
+        android:id="@+id/edt_bus_line"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:hint="公交线路"
+        android:textColorHint="#cccccc"
+        android:textColor="#fff"
+        android:textSize="14sp"/>
+
+    <Button
+        android:id="@+id/btn_search"
+        android:layout_width="80dp"
+        android:layout_height="wrap_content"
+        android:background="@null"
+        android:text="搜索"
+        android:textColor="#fff"
+        android:textSize="20sp"/>
+</LinearLayout>

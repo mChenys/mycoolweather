@@ -296,7 +296,7 @@ public class WeatherActivity extends AppCompatActivity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         menu.add(0, 0, 0, "短信分享");
-        menu.add(0, 1, 1, "我的位置");
+        menu.add(0, 1, 1, "出行助手");
         return true;
     }
 

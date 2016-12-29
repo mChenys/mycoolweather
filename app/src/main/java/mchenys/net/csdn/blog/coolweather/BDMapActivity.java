@@ -110,7 +110,7 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
         mBaiduMap = mMapView.getMap();
         mToolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(mToolbar);
-        getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        mToolbar.setNavigationIcon(R.drawable.ic_back);
         mChangeMarkerBtn = (Button) findViewById(R.id.btn_chg_marker);
         mChangeMarkerBtn.setOnClickListener(mChangeMarkerListener);
         mStepLayout = (LinearLayout) findViewById(R.id.ll_step);
@@ -247,6 +247,12 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
 
             }
         });
+        mToolbar.setNavigationOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                finish();
+            }
+        });
     }
 
     /**
@@ -305,9 +311,7 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
-            case android.R.id.home:
-                finish();
-                break;
+
             case 0:
                 //普通地图
                 MapView.setMapCustomEnable(false);

@@ -3,7 +3,7 @@ package mchenys.net.csdn.blog.coolweather.db;
 import org.litepal.crud.DataSupport;
 
 /**
- * 县实体类
+ *县实体类
  * Created by mChenys on 2016/12/16.
  */
 public class County extends DataSupport {

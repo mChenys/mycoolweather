@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * 路线搜索
  * Created by mChenys on 2016/12/27.
  */
 public class AddressInfo extends DataSupport {

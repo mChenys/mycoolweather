@@ -46,6 +46,9 @@
         <activity android:name=".FindCityActivity">
 
         </activity>
+        <activity android:name=".BusLineSearchActivity">
+
+        </activity>
         <!--baidu-->
         <service
             android:name="com.baidu.location.f"
