@@ -28,7 +28,7 @@
             android:layout_margin="10dp"
             android:layout_weight="1"
             android:background="@drawable/shape_stroke"
-            android:drawableLeft="@drawable/route_navi_search"
+            android:drawableLeft="@drawable/ic_search"
             android:drawablePadding="5dp"
             android:drawableRight="@drawable/ic_delete"
             android:hint="输入搜索位置"

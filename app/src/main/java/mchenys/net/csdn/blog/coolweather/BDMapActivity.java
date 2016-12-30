@@ -42,7 +42,9 @@ import com.baidu.mapapi.map.Marker;
 import com.baidu.mapapi.map.MyLocationConfiguration;
 import com.baidu.mapapi.map.MyLocationData;
 import com.baidu.mapapi.model.LatLng;
+import com.baidu.mapapi.search.busline.BusLineResult;
 import com.baidu.mapapi.search.core.RouteLine;
+import com.baidu.mapapi.search.core.RouteNode;
 import com.baidu.mapapi.search.core.RouteStep;
 import com.baidu.mapapi.search.core.SearchResult;
 import com.baidu.mapapi.search.geocode.GeoCodeResult;
@@ -50,6 +52,7 @@ import com.baidu.mapapi.search.geocode.GeoCoder;
 import com.baidu.mapapi.search.geocode.OnGetGeoCoderResultListener;
 import com.baidu.mapapi.search.geocode.ReverseGeoCodeOption;
 import com.baidu.mapapi.search.geocode.ReverseGeoCodeResult;
+import com.baidu.mapapi.search.poi.PoiResult;
 import com.baidu.mapapi.search.route.BikingRouteLine;
 import com.baidu.mapapi.search.route.DrivingRouteLine;
 import com.baidu.mapapi.search.route.MassTransitRouteLine;
@@ -66,8 +69,10 @@ import java.util.List;
 import mchenys.net.csdn.blog.coolweather.adapter.RouteStepAdapter;
 import mchenys.net.csdn.blog.coolweather.adapter.RouteType;
 import mchenys.net.csdn.blog.coolweather.mapapi.overlayutil.BikingRouteOverlay;
+import mchenys.net.csdn.blog.coolweather.mapapi.overlayutil.BusLineOverlay;
 import mchenys.net.csdn.blog.coolweather.mapapi.overlayutil.DrivingRouteOverlay;
 import mchenys.net.csdn.blog.coolweather.mapapi.overlayutil.MassTransitRouteOverlay;
+import mchenys.net.csdn.blog.coolweather.mapapi.overlayutil.PoiOverlay;
 import mchenys.net.csdn.blog.coolweather.mapapi.overlayutil.TransitRouteOverlay;
 import mchenys.net.csdn.blog.coolweather.mapapi.overlayutil.WalkingRouteOverlay;
 
@@ -99,6 +104,8 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
     private LocationClient mLocationClient;
     private BaiduMap mBaiduMap;
     private GeoCoder mGeoCoder;
+    private BusLineResult mBusLineResult;
+
     private LatLng mStartLatLng, mEndLatLng;
     private int nowSearchType;
     private boolean isOpenLocation;//是否开启自动定位
@@ -201,13 +208,22 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
                 return false;
             }
         });
-        //点击marker移动并弹出显示位置
+        //点击marker弹出显示位置
         mBaiduMap.setOnMarkerClickListener(new BaiduMap.OnMarkerClickListener() {
             @Override
             public boolean onMarkerClick(Marker marker) {
                 LatLng ll = marker.getPosition();
-                mBaiduMap.setMapStatus(MapStatusUpdateFactory.newLatLng(ll));
-                mGeoCoder.reverseGeoCode(new ReverseGeoCodeOption().location(ll));
+                if (null != mBusLineResult) {
+                    for (RouteNode routeNode : mBusLineResult.getStations()) {
+                        if (routeNode.getLocation() == ll) {
+                            showInfoWindow(routeNode.getTitle(), ll);
+                            return true;
+                        }
+                    }
+                } else {
+                    mBaiduMap.setMapStatus(MapStatusUpdateFactory.newLatLng(ll));
+                    mGeoCoder.reverseGeoCode(new ReverseGeoCodeOption().location(ll));
+                }
                 return true;
             }
         });
@@ -228,13 +244,14 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
                 mModeCb.setVisibility(View.VISIBLE);
                 isOpenLocation = true;
                 mModeCb.setChecked(false);
-                mBaiduMap.setMyLocationConfigeration(new MyLocationConfiguration(MyLocationConfiguration.LocationMode.FOLLOWING , true, null));
+                mBaiduMap.setMyLocationConfigeration(new MyLocationConfiguration(MyLocationConfiguration.LocationMode.FOLLOWING, true, null));
                 m2DLayerLl.performClick();
             }
         });
         mStepBackIv.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                mBaiduMap.clear();//清除路况
                 //返回路线选择页
                 Intent intent = new Intent(BDMapActivity.this, RoutePlanActiviy.class);
                 intent.putExtra("startLatlng", mStartLatLng);
@@ -263,6 +280,7 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
         mRouteIb.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                mBaiduMap.clear();
                 Intent intent = new Intent(BDMapActivity.this, RoutePlanActiviy.class);
                 intent.putExtra("startLatlng", mStartLatLng);
                 intent.putExtra("endLatlng", mStartLatLng);
@@ -305,7 +323,8 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
         mBusSearchTv.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(BDMapActivity.this, BusLineSearchActivity.class);
+                mBaiduMap.clear();
+                Intent intent = new Intent(BDMapActivity.this, PoiSearchActivity.class);
                 startActivityForResult(intent, REQ_SEARCH_BUSLINE, null);
             }
         });
@@ -537,69 +556,90 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (RESULT_OK == resultCode && REQ_SEARCH_ROUTE == requestCode) {
-            int linePosition = data.getIntExtra("linePosition", 1);
-            boolean isSameCity = data.getBooleanExtra("isSameCity", false);//是否是同城,跨域交通用到
-            RouteLine routeLine = data.getParcelableExtra("routeLine");
-            nowSearchType = data.getIntExtra("nowSearchType", -1);
-            mStartLatLng = data.getParcelableExtra("startLatlng");
-            mEndLatLng = data.getParcelableExtra("endLatlng");
-            startCityName = data.getStringExtra("startCityName");
-            mStartNodeName = data.getStringExtra("startNodeName");
-            mEndNodeName = data.getStringExtra("endNodeName");
-            if (null == routeLine || -1 == nowSearchType) {
-                Toast.makeText(BDMapActivity.this, "获取路线失败", Toast.LENGTH_SHORT).show();
-                return;
-            }
-            switch (nowSearchType) {
-                case RouteType.MASS_TRANSIT_ROUTE://跨城交通
-                    MassTransitRouteOverlay overlay0 = new MassTransitRouteOverlay(mBaiduMap);
-                    mBaiduMap.setOnMarkerClickListener(overlay0);
-                    MassTransitRouteLine nowRouteMass = (MassTransitRouteLine) routeLine;
-                    overlay0.setData(nowRouteMass);
-                    if (isSameCity) {
-                        overlay0.setSameCity(true); // 同城
-                    } else {
-                        overlay0.setSameCity(false);// 跨城
-                    }
-                    overlay0.addToMap();
-                    overlay0.zoomToSpan();
-                    break;
-                case RouteType.DRIVING_ROUTE://驾车
-                    DrivingRouteOverlay overlay1 = new DrivingRouteOverlay(mBaiduMap);
-                    mBaiduMap.setOnMarkerClickListener(overlay1);
-                    DrivingRouteLine nowRouteDriving = (DrivingRouteLine) routeLine;
-                    overlay1.setData(nowRouteDriving);
-                    overlay1.addToMap();
-                    overlay1.zoomToSpan();
-                    break;
-                case RouteType.TRANSIT_ROUTE://公交
-                    TransitRouteOverlay overlay2 = new TransitRouteOverlay(mBaiduMap);
-                    mBaiduMap.setOnMarkerClickListener(overlay2);
-                    TransitRouteLine nowRouteTransit = (TransitRouteLine) routeLine;
-                    overlay2.setData(nowRouteTransit);
-                    overlay2.addToMap();
-                    overlay2.zoomToSpan();
-                    break;
-                case RouteType.WALKING_ROUTE://步行
-                    WalkingRouteOverlay overlay3 = new WalkingRouteOverlay(mBaiduMap);
-                    mBaiduMap.setOnMarkerClickListener(overlay3);
-                    WalkingRouteLine nowRouteWalking = (WalkingRouteLine) routeLine;
-                    overlay3.setData(nowRouteWalking);
-                    overlay3.addToMap();
-                    overlay3.zoomToSpan();
-                    break;
-                case RouteType.BIKING_ROUTE://骑行
-                    BikingRouteOverlay overlay4 = new BikingRouteOverlay(mBaiduMap);
-                    mBaiduMap.setOnMarkerClickListener(overlay4);
-                    BikingRouteLine nowRouteBiking = (BikingRouteLine) routeLine;
-                    overlay4.setData(nowRouteBiking);
-                    overlay4.addToMap();
-                    overlay4.zoomToSpan();
-                    break;
-            }
-            showRouteDesc(nowSearchType, routeLine, linePosition, isSameCity);
+        if (RESULT_OK == resultCode) {
+            if (REQ_SEARCH_ROUTE == requestCode) {
+                int linePosition = data.getIntExtra("linePosition", 1);
+                boolean isSameCity = data.getBooleanExtra("isSameCity", false);//是否是同城,跨域交通用到
+                RouteLine routeLine = data.getParcelableExtra("routeLine");
+                nowSearchType = data.getIntExtra("nowSearchType", -1);
+                mStartLatLng = data.getParcelableExtra("startLatlng");
+                mEndLatLng = data.getParcelableExtra("endLatlng");
+                startCityName = data.getStringExtra("startCityName");
+                mStartNodeName = data.getStringExtra("startNodeName");
+                mEndNodeName = data.getStringExtra("endNodeName");
+                if (null == routeLine || -1 == nowSearchType) {
+                    Toast.makeText(BDMapActivity.this, "获取路线失败", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                switch (nowSearchType) {
+                    case RouteType.MASS_TRANSIT_ROUTE://跨城交通
+                        MassTransitRouteOverlay overlay0 = new MassTransitRouteOverlay(mBaiduMap);
+                        mBaiduMap.setOnMarkerClickListener(overlay0);
+                        MassTransitRouteLine nowRouteMass = (MassTransitRouteLine) routeLine;
+                        overlay0.setData(nowRouteMass);
+                        if (isSameCity) {
+                            overlay0.setSameCity(true); // 同城
+                        } else {
+                            overlay0.setSameCity(false);// 跨城
+                        }
+                        overlay0.addToMap();
+                        overlay0.zoomToSpan();
+                        break;
+                    case RouteType.DRIVING_ROUTE://驾车
+                        DrivingRouteOverlay overlay1 = new DrivingRouteOverlay(mBaiduMap);
+                        mBaiduMap.setOnMarkerClickListener(overlay1);
+                        DrivingRouteLine nowRouteDriving = (DrivingRouteLine) routeLine;
+                        overlay1.setData(nowRouteDriving);
+                        overlay1.addToMap();
+                        overlay1.zoomToSpan();
+                        break;
+                    case RouteType.TRANSIT_ROUTE://公交
+                        TransitRouteOverlay overlay2 = new TransitRouteOverlay(mBaiduMap);
+                        mBaiduMap.setOnMarkerClickListener(overlay2);
+                        TransitRouteLine nowRouteTransit = (TransitRouteLine) routeLine;
+                        overlay2.setData(nowRouteTransit);
+                        overlay2.addToMap();
+                        overlay2.zoomToSpan();
+                        break;
+                    case RouteType.WALKING_ROUTE://步行
+                        WalkingRouteOverlay overlay3 = new WalkingRouteOverlay(mBaiduMap);
+                        mBaiduMap.setOnMarkerClickListener(overlay3);
+                        WalkingRouteLine nowRouteWalking = (WalkingRouteLine) routeLine;
+                        overlay3.setData(nowRouteWalking);
+                        overlay3.addToMap();
+                        overlay3.zoomToSpan();
+                        break;
+                    case RouteType.BIKING_ROUTE://骑行
+                        BikingRouteOverlay overlay4 = new BikingRouteOverlay(mBaiduMap);
+                        mBaiduMap.setOnMarkerClickListener(overlay4);
+                        BikingRouteLine nowRouteBiking = (BikingRouteLine) routeLine;
+                        overlay4.setData(nowRouteBiking);
+                        overlay4.addToMap();
+                        overlay4.zoomToSpan();
+                        break;
+                }
+                showRouteDesc(nowSearchType, routeLine, linePosition, isSameCity);
 
+            } else if (requestCode == REQ_SEARCH_BUSLINE) {
+                int type = data.getIntExtra("type", 0);
+                if (type == PoiSearchActivity.TYPE_BUS_LINE) {
+                    mBusLineResult = data.getParcelableExtra("busLineResult");
+                    BusLineOverlay overlay = new BusLineOverlay(mBaiduMap);
+                    mBaiduMap.setOnMarkerClickListener(overlay);
+                    overlay.setData(mBusLineResult);
+                    overlay.addToMap();
+                    overlay.zoomToSpan();
+                } else if (type == PoiSearchActivity.TYPE_HAVE_FUN) {
+                    PoiResult result = data.getParcelableExtra("poiResult");
+                    mBaiduMap.clear();
+                    PoiOverlay overlay = new PoiOverlay(mBaiduMap);
+                    mBaiduMap.setOnMarkerClickListener(overlay);
+                    overlay.setData(result);
+                    overlay.addToMap();
+                    overlay.zoomToSpan();
+                }
+
+            }
         }
     }
 
@@ -720,14 +760,28 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
     @Override
     public void onGetReverseGeoCodeResult(ReverseGeoCodeResult result) {
         if (result != null && result.error == SearchResult.ERRORNO.NO_ERROR) {
-            // show popup
-            TextView popupText = new TextView(BDMapActivity.this);
-            popupText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-            popupText.setBackgroundResource(R.drawable.popup);
-            popupText.setTextColor(0xFF000000);
-            popupText.setText(result.getAddress());
-            mBaiduMap.showInfoWindow(new InfoWindow(popupText, result.getLocation(), 0));
+            showInfoWindow(result.getAddress(), result.getLocation());
         }
 
+    }
+
+    // show popup
+    private void showInfoWindow(String txt, LatLng latLng) {
+        TextView popupText = new TextView(BDMapActivity.this);
+        popupText.setPadding(5, 5, 5, 30);
+        popupText.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        popupText.setBackgroundResource(R.drawable.popup);
+        popupText.setTextColor(0xFF000000);
+        popupText.setText(txt);
+        mBaiduMap.showInfoWindow(new InfoWindow(popupText, latLng, 0));
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (mStepLayout.isShown()) {
+            setMapBottomMargin(0);
+            return;
+        }
+        super.onBackPressed();
     }
 }

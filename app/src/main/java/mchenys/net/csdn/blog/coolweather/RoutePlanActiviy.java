@@ -560,5 +560,9 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
         }
     }
 
-
+    @Override
+    protected void onDestroy() {
+        mSearch.destroy();
+        super.onDestroy();
+    }
 }

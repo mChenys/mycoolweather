@@ -40,13 +40,16 @@
         </activity>
 
         <service android:name=".service.AutoUpdateService"/>
+
         <activity android:name=".RoutePlanActiviy">
 
         </activity>
         <activity android:name=".FindCityActivity">
 
         </activity>
-        <activity android:name=".BusLineSearchActivity">
+        <activity
+            android:name=".PoiSearchActivity"
+            android:windowSoftInputMode="stateHidden|adjustPan">
 
         </activity>
         <!--baidu-->

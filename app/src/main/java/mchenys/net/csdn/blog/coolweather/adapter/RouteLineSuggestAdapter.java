@@ -13,6 +13,7 @@ import mchenys.net.csdn.blog.coolweather.R;
 import mchenys.net.csdn.blog.coolweather.gson.SuggestAddressInfo;
 
 /**
+ * 建议线路
  * Created by mChenys on 2016/12/27.
  */
 public class RouteLineSuggestAdapter extends BaseAdapter {

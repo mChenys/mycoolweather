@@ -24,6 +24,8 @@ import com.baidu.location.LocationClientOption;
 import java.util.ArrayList;
 import java.util.List;
 
+import mchenys.net.csdn.blog.coolweather.fragment.ChooseAreaFragment;
+
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
     private LocationClient mLocationClient;

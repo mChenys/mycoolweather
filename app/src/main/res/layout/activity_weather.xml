@@ -58,10 +58,11 @@
         <!--左侧菜单界面-->
         <fragment
             android:id="@+id/choose_area_fragment"
-            android:name="mchenys.net.csdn.blog.coolweather.ChooseAreaFragment"
+            android:name="mchenys.net.csdn.blog.coolweather.fragment.ChooseAreaFragment"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:layout_gravity="start"/>
+            android:layout_gravity="start"
+            android:layout_marginRight="50dp"/>
     </android.support.v4.widget.DrawerLayout>
 
 

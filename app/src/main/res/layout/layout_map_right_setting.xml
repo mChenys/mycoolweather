@@ -168,6 +168,7 @@
                 android:background="@drawable/selector_switch_bg"
                 android:button="@null"/>
         </RelativeLayout>
+
     </LinearLayout>
 
 </LinearLayout>

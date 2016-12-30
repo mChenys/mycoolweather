@@ -1,16 +1,14 @@
-package mchenys.net.csdn.blog.coolweather;
+package mchenys.net.csdn.blog.coolweather.fragment;
 
-import android.app.ProgressDialog;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.Toolbar;
+import android.support.v4.app.Fragment;
 import android.view.Gravity;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -22,6 +20,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import mchenys.net.csdn.blog.coolweather.PoiSearchActivity;
+import mchenys.net.csdn.blog.coolweather.R;
 import mchenys.net.csdn.blog.coolweather.adapter.MySpinnerAdapter;
 import mchenys.net.csdn.blog.coolweather.db.City;
 import mchenys.net.csdn.blog.coolweather.db.Province;
@@ -32,42 +32,37 @@ import okhttp3.Callback;
 import okhttp3.Response;
 
 /**
- * Created by mChenys on 2016/12/29.
+ * Created by mChenys on 2016/12/30.
  */
-public class BusLineSearchActivity extends AppCompatActivity {
-    private Toolbar mToolbar;
+public class BusLineSearchFragment extends Fragment {
     private Spinner mProvinceSpinner, mCitySpinner;
     private EditText mBusLineEdt;
-    private Button mSearchBtn;
-    private RecyclerView mRecyclerView;
-    private ProgressDialog mProgressDialog;
     private Province mSelectedProvince;
     private List<Province> mProvinceList = new ArrayList<>();
     private List<City> mCityList = new ArrayList<>();
     private MySpinnerAdapter mProvinceAdapter, mCityAdapter;
+    private PoiSearchActivity mParent;
     private String mCityName;
+    @Override
+    public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        View view = inflater.inflate(R.layout.fragment_busline_search_header, container, false);
+        return view;
+    }
 
     @Override
-    protected void onCreate(@Nullable Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_bus_search);
-        initView();
+    public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
+        mParent = (PoiSearchActivity) getActivity();
+        initView(view);
         initData();
         initListener();
     }
 
-
-    private void initView() {
-        mToolbar = (Toolbar) findViewById(R.id.toolbar);
-        setSupportActionBar(mToolbar);
-        mToolbar.setNavigationIcon(R.drawable.ic_back);
-        mProvinceSpinner = (Spinner) findViewById(R.id.sp_province);
-        mCitySpinner = (Spinner) findViewById(R.id.sp_city);
-        mBusLineEdt = (EditText) findViewById(R.id.edt_bus_line);
-        mSearchBtn = (Button) findViewById(R.id.btn_search);
-        mRecyclerView = (RecyclerView) findViewById(R.id.recycleView);
-        mProvinceAdapter = new MySpinnerAdapter<>(this, mProvinceList);
-        mCityAdapter = new MySpinnerAdapter<>(this, mCityList);
+    private void initView(View view) {
+        mProvinceSpinner = (Spinner) view.findViewById(R.id.sp_province);
+        mCitySpinner = (Spinner) view.findViewById(R.id.sp_city);
+        mBusLineEdt = (EditText) view.findViewById(R.id.edt_bus_line);
+        mProvinceAdapter = new MySpinnerAdapter<>(getActivity(), mProvinceList);
+        mCityAdapter = new MySpinnerAdapter<>(getActivity(), mCityList);
         mProvinceSpinner.setAdapter(mProvinceAdapter);
         mCitySpinner.setAdapter(mCityAdapter);
     }
@@ -78,18 +73,14 @@ public class BusLineSearchActivity extends AppCompatActivity {
     }
 
     private void initListener() {
-        mToolbar.setNavigationOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                finish();
-            }
-        });
         mProvinceSpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                TextView tv = (TextView) view;
-                tv.setTextColor(Color.WHITE);
-                tv.setGravity(Gravity.CENTER);
+                if (null != view) {
+                    TextView tv = (TextView) view;
+                    tv.setTextColor(Color.WHITE);
+                    tv.setGravity(Gravity.CENTER);
+                }
                 mSelectedProvince = (Province) parent.getItemAtPosition(position);
                 queryCities();
             }
@@ -102,9 +93,11 @@ public class BusLineSearchActivity extends AppCompatActivity {
         mCitySpinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                TextView tv = (TextView) view;
-                tv.setTextColor(Color.WHITE);
-                tv.setGravity(Gravity.CENTER);
+                if (null != view) {
+                    TextView tv = (TextView) view;
+                    tv.setTextColor(Color.WHITE);
+                    tv.setGravity(Gravity.CENTER);
+                }
                 mCityName = mCityList.get(position).getCityName();
             }
 
@@ -114,7 +107,6 @@ public class BusLineSearchActivity extends AppCompatActivity {
             }
         });
     }
-
     //查询所有省
     private void queryProvinces() {
         List<Province> temp = DataSupport.findAll(Province.class);
@@ -123,7 +115,8 @@ public class BusLineSearchActivity extends AppCompatActivity {
             mProvinceList.addAll(temp);
             mProvinceAdapter.notifyDataSetChanged();
             mProvinceSpinner.setSelection(0);
-            closeProvinceDialog();
+            mSelectedProvince = mProvinceList.get(0);
+            mParent.closeProgressDialog();
         } else {
             String address = "http://guolin.tech/api/china";
             asyncQueryFromServer(address, "province");
@@ -138,7 +131,8 @@ public class BusLineSearchActivity extends AppCompatActivity {
             mCityList.addAll(temp);
             mCityAdapter.notifyDataSetChanged();
             mCitySpinner.setSelection(0);
-            closeProvinceDialog();
+            mCityName = mCityList.get(0).getCityName();
+            mParent.closeProgressDialog();
         } else {
             int provinceCode = mSelectedProvince.getProvinceCode();
             String address = "http://guolin.tech/api/china/" + provinceCode;
@@ -153,15 +147,15 @@ public class BusLineSearchActivity extends AppCompatActivity {
      * @param type
      */
     private void asyncQueryFromServer(String address, final String type) {
-        showProgressDialog();
+        mParent.showProgressDialog();
         HttpUtil.sendOkHttpRequest(address, new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
-                runOnUiThread(new Runnable() {
+                getActivity().runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        closeProvinceDialog();
-                        Toast.makeText(BusLineSearchActivity.this, "加载失败", Toast.LENGTH_SHORT).show();
+                        mParent.closeProgressDialog();
+                        Toast.makeText(mParent, "加载失败", Toast.LENGTH_SHORT).show();
                     }
                 });
             }
@@ -169,7 +163,7 @@ public class BusLineSearchActivity extends AppCompatActivity {
             @Override
             public void onResponse(Call call, final Response response) throws IOException {
                 final String responseText = response.body().string();
-                runOnUiThread(new Runnable() {
+                getActivity().runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         if (isHandleSuccess(responseText, type)) {
@@ -199,20 +193,11 @@ public class BusLineSearchActivity extends AppCompatActivity {
         return result;
     }
 
-    private void closeProvinceDialog() {
-        if (null != mProgressDialog) {
-            mProgressDialog.dismiss();
-        }
+    public String getCityName() {
+        return mCityName;
     }
 
-    private void showProgressDialog() {
-        if (null == mProgressDialog) {
-            mProgressDialog = new ProgressDialog(this);
-            mProgressDialog.setMessage("正在加载");
-            mProgressDialog.setCanceledOnTouchOutside(false);
-        }
-        mProgressDialog.show();
+    public String getBusLine() {
+        return mBusLineEdt.getText().toString().trim();
     }
-
-
 }

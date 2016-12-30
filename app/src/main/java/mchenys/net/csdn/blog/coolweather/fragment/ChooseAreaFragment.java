@@ -1,4 +1,4 @@
-package mchenys.net.csdn.blog.coolweather;
+package mchenys.net.csdn.blog.coolweather.fragment;
 
 import android.app.ProgressDialog;
 import android.content.Intent;
@@ -23,6 +23,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import mchenys.net.csdn.blog.coolweather.MainActivity;
+import mchenys.net.csdn.blog.coolweather.R;
+import mchenys.net.csdn.blog.coolweather.WeatherActivity;
 import mchenys.net.csdn.blog.coolweather.db.City;
 import mchenys.net.csdn.blog.coolweather.db.County;
 import mchenys.net.csdn.blog.coolweather.db.Province;
@@ -53,7 +56,6 @@ public class ChooseAreaFragment extends Fragment {
     private City mSelectedCity;//选中的市
     private int currentLevel; //当前选中的级别
 
-    @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.choose_area, container, false);

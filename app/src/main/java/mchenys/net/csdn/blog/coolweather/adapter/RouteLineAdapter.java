@@ -15,6 +15,9 @@ import java.util.List;
 
 import mchenys.net.csdn.blog.coolweather.R;
 
+/**
+ * 线路
+ */
 public class RouteLineAdapter extends BaseAdapter {
 
     private List<? extends RouteLine> routeLines;
