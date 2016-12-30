@@ -41,12 +41,15 @@ import com.baidu.mapapi.search.route.TransitRouteResult;
 import com.baidu.mapapi.search.route.WalkingRoutePlanOption;
 import com.baidu.mapapi.search.route.WalkingRouteResult;
 
+import java.util.ArrayList;
+
 import mchenys.net.csdn.blog.coolweather.adapter.RouteLineAdapter;
 import mchenys.net.csdn.blog.coolweather.adapter.RouteLineSuggestAdapter;
 import mchenys.net.csdn.blog.coolweather.adapter.RouteType;
 import mchenys.net.csdn.blog.coolweather.gson.SuggestAddressInfo;
 
 /**
+ * 路线规划
  * Created by mChenys on 2016/12/27.
  */
 public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePlanResultListener, OnGetGeoCoderResultListener {
@@ -70,6 +73,7 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
     private RouteLineSuggestAdapter mSuggestAdapter;
     //0:建议列表表示起始点地理编码查询,1:建议列表表示终点地理编码查询,2:表示非建议列表表示起始点地理编码查询,3:非建议列表表示终点地理编码查询
     private int mGeoCoderType;
+    private ArrayList<? extends RouteLine> mCurrRouteLineList;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -114,14 +118,22 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
         mEndLatLng = getIntent().getParcelableExtra("endLatlng");
         startCityName = getIntent().getStringExtra("cityName");
         nowSearchType = getIntent().getIntExtra("nowSearchType", 0);
+
+        TabLayout.Tab tab = mTabLayout.getTabAt(nowSearchType);
+        if (null != tab) {
+            tab.select();
+        }
         boolean isAutoSearch = getIntent().getBooleanExtra("isAutoSearch", false);
         if (isAutoSearch) {
             String startNodeName = getIntent().getStringExtra("startNodeName");
             String endNodeName = getIntent().getStringExtra("endNodeName");
             mStartNodeTv.setText(startNodeName);
             mEndNodeTv.setText(endNodeName);
-            searchRoute();
+            mCurrRouteLineList = getIntent().getParcelableArrayListExtra("routeLineList");
+            showRouteLineResult(nowSearchType,mCurrRouteLineList);
         }
+        Log.d(TAG, "#initData->startCityName:" + startCityName + " startPlaceName:" + startPlaceName + " endCityName:" + endCityName + " endPlaceName:" + endPlaceName+" mStartLatLng:"+mStartLatLng+" mEndLatLng:"+mEndLatLng);
+
     }
 
 
@@ -141,7 +153,9 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
         mTabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
             public void onTabSelected(TabLayout.Tab tab) {
+                mRoutePlanLv.setVisibility(View.GONE);
                 nowSearchType = tab.getPosition();
+
             }
 
             @Override
@@ -231,6 +245,7 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
     private void showRouteLineByMap(RouteLine routeLine, int linePosition) {
         Intent intent = getIntent();
         intent.putExtra("routeLine", routeLine);
+        intent.putParcelableArrayListExtra("routeLineList", mCurrRouteLineList);
         intent.putExtra("nowSearchType", nowSearchType);
         intent.putExtra("isSameCity", isSameCity);
         intent.putExtra("linePosition", linePosition);
@@ -241,6 +256,8 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
         intent.putExtra("endNodeName", mEndNodeTv.getText().toString().trim());
         setResult(RESULT_OK, intent);
         finish();
+        Log.d(TAG, "#showRouteLineByMap->startCityName:" + startCityName + " startPlaceName:" + startPlaceName + " endCityName:" + endCityName + " endPlaceName:" + endPlaceName+" mStartLatLng:"+mStartLatLng+" mEndLatLng:"+mEndLatLng);
+
     }
 
     /**
@@ -265,22 +282,24 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
                 mStartLatLng = new LatLng(result.getLocation().latitude, result.getLocation().longitude);
                 mSuggestAdapter.resetData(SuggestAddressInfo.endNodeList);
                 mRoutePlanLv.setVisibility(View.VISIBLE);
-                Log.d(TAG, "#start search->起点维度:" + mStartLatLng.latitude + " 起点经度:" + mStartLatLng.longitude);
+                Log.d(TAG, "#suggest search->起点维度:" + mStartLatLng.latitude + " 起点经度:" + mStartLatLng.longitude);
 
                 break;
             case 1://建议终点
                 mEndLatLng = new LatLng(result.getLocation().latitude, result.getLocation().longitude);
                 mRoutePlanLv.setVisibility(View.GONE);
-                Log.d(TAG, "#start search->终点维度:" + mEndLatLng.latitude + " 终点经度:" + mEndLatLng.longitude);
+                Log.d(TAG, "#suggest search->终点维度:" + mEndLatLng.latitude + " 终点经度:" + mEndLatLng.longitude);
 
                 break;
             case 2://非建议起点
                 mStartLatLng = new LatLng(result.getLocation().latitude, result.getLocation().longitude);
-                Log.d(TAG, "#start search->起点维度:" + mStartLatLng.latitude + " 起点经度:" + mStartLatLng.longitude);
+                Log.d(TAG, "#onActivityResult->startCityName:" + startCityName + " startPlaceName:" + startPlaceName + " endCityName:" + endCityName + " endPlaceName:" + endPlaceName+" mStartLatLng:"+mStartLatLng+" mEndLatLng:"+mEndLatLng);
+
                 break;
             case 3://非建议终点
                 mEndLatLng = new LatLng(result.getLocation().latitude, result.getLocation().longitude);
-                Log.d(TAG, "#start search->终点维度:" + mEndLatLng.latitude + " 终点经度:" + mEndLatLng.longitude);
+                Log.d(TAG, "#onActivityResult->startCityName:" + startCityName + " startPlaceName:" + startPlaceName + " endCityName:" + endCityName + " endPlaceName:" + endPlaceName+" mStartLatLng:"+mStartLatLng+" mEndLatLng:"+mEndLatLng);
+
 
                 break;
         }
@@ -332,6 +351,7 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
         return true;
     }
 
+    //跨城搜索结果
     @Override
     public void onGetMassTransitRouteResult(MassTransitRouteResult result) {
         if (result == null || result.error != SearchResult.ERRORNO.NO_ERROR) {
@@ -353,13 +373,11 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
             isSameCity = result.getOrigin().getCityId() == result.getDestination().getCityId();
             if (result.getRouteLines().size() > 1) {
                 // 列表选择
-                RouteLineAdapter routeLineAdapter = new RouteLineAdapter(RoutePlanActiviy.this,
-                        result.getRouteLines(),
-                        RouteType.MASS_TRANSIT_ROUTE);
-                mRoutePlanLv.setAdapter(routeLineAdapter);
-                mRoutePlanLv.setVisibility(View.VISIBLE);
+                mCurrRouteLineList = (ArrayList<? extends RouteLine>) result.getRouteLines();
+                showRouteLineResult(RouteType.MASS_TRANSIT_ROUTE, mCurrRouteLineList);
 
             } else if (result.getRouteLines().size() == 1) {
+                if(null !=mCurrRouteLineList)mCurrRouteLineList.clear();
                 showRouteLineByMap(result.getRouteLines().get(0), 1);
             } else {
                 Log.d("route result", "结果数<0");
@@ -369,7 +387,7 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
 
     }
 
-
+    //驾车搜索结果
     @Override
     public void onGetDrivingRouteResult(DrivingRouteResult result) {
         if (result == null || result.error != SearchResult.ERRORNO.NO_ERROR) {
@@ -390,14 +408,11 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
             closeProgressDialog();
 
             if (result.getRouteLines().size() > 1) {
-                RouteLineAdapter routeLineAdapter = new RouteLineAdapter(RoutePlanActiviy.this,
-                        result.getRouteLines(),
-                        RouteType.DRIVING_ROUTE);
-
-                mRoutePlanLv.setAdapter(routeLineAdapter);
-                mRoutePlanLv.setVisibility(View.VISIBLE);
+                mCurrRouteLineList = (ArrayList<? extends RouteLine>) result.getRouteLines();
+                showRouteLineResult(RouteType.DRIVING_ROUTE, mCurrRouteLineList);
 
             } else if (result.getRouteLines().size() == 1) {
+                if(null !=mCurrRouteLineList)mCurrRouteLineList.clear();
                 showRouteLineByMap(result.getRouteLines().get(0), 1);
             } else {
                 Log.d("route result", "结果数<0");
@@ -407,7 +422,7 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
         }
     }
 
-
+    //公交搜索结果
     @Override
     public void onGetTransitRouteResult(TransitRouteResult result) {
 
@@ -429,15 +444,10 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
             closeProgressDialog();
 
             if (result.getRouteLines().size() > 1) {
-
-                RouteLineAdapter routeLineAdapter = new RouteLineAdapter(RoutePlanActiviy.this,
-                        result.getRouteLines(),
-                        RouteType.TRANSIT_ROUTE);
-
-                mRoutePlanLv.setAdapter(routeLineAdapter);
-                mRoutePlanLv.setVisibility(View.VISIBLE);
-
+                mCurrRouteLineList = (ArrayList<? extends RouteLine>) result.getRouteLines();
+                showRouteLineResult(RouteType.TRANSIT_ROUTE, mCurrRouteLineList);
             } else if (result.getRouteLines().size() == 1) {
+                if(null !=mCurrRouteLineList)mCurrRouteLineList.clear();
                 showRouteLineByMap(result.getRouteLines().get(0), 1);
             } else {
                 Log.d("route result", "结果数<0");
@@ -447,6 +457,7 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
         }
     }
 
+    //步行搜索结果
     @Override
     public void onGetWalkingRouteResult(WalkingRouteResult result) {
         if (result == null || result.error != SearchResult.ERRORNO.NO_ERROR) {
@@ -467,14 +478,10 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
             closeProgressDialog();
 
             if (result.getRouteLines().size() > 1) {
-
-                RouteLineAdapter routeLineAdapter = new RouteLineAdapter(RoutePlanActiviy.this,
-                        result.getRouteLines(),
-                        RouteType.WALKING_ROUTE);
-
-                mRoutePlanLv.setAdapter(routeLineAdapter);
-                mRoutePlanLv.setVisibility(View.VISIBLE);
+                mCurrRouteLineList = (ArrayList<? extends RouteLine>) result.getRouteLines();
+                showRouteLineResult(RouteType.WALKING_ROUTE, mCurrRouteLineList);
             } else if (result.getRouteLines().size() == 1) {
+                if(null !=mCurrRouteLineList)mCurrRouteLineList.clear();
                 showRouteLineByMap(result.getRouteLines().get(0), 1);
             } else {
                 Log.d("route result", "结果数<0");
@@ -485,7 +492,7 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
 
     }
 
-
+    //骑行搜索结果
     @Override
     public void onGetBikingRouteResult(BikingRouteResult result) {
         if (result == null || result.error != SearchResult.ERRORNO.NO_ERROR) {
@@ -507,13 +514,11 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
 
             if (result.getRouteLines().size() > 1) {
 
-                RouteLineAdapter routeLineAdapter = new RouteLineAdapter(RoutePlanActiviy.this,
-                        result.getRouteLines(),
-                        RouteType.BIKING_ROUTE);
-                mRoutePlanLv.setAdapter(routeLineAdapter);
-                mRoutePlanLv.setVisibility(View.VISIBLE);
+                mCurrRouteLineList = (ArrayList<? extends RouteLine>) result.getRouteLines();
+                showRouteLineResult(RouteType.BIKING_ROUTE, mCurrRouteLineList);
 
             } else if (result.getRouteLines().size() == 1) {
+                if(null !=mCurrRouteLineList)mCurrRouteLineList.clear();
                 showRouteLineByMap(result.getRouteLines().get(0), 1);
             } else {
                 Log.d("route result", "结果数<0");
@@ -521,6 +526,13 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
             }
 
         }
+    }
+
+    private void showRouteLineResult(int nowSearchType, ArrayList<? extends RouteLine> routeLines) {
+        RouteLineAdapter routeLineAdapter = new RouteLineAdapter(RoutePlanActiviy.this, routeLines, nowSearchType);
+        mRoutePlanLv.setAdapter(routeLineAdapter);
+        mRoutePlanLv.setVisibility(View.VISIBLE);
+
     }
 
     @Override
@@ -534,9 +546,11 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+
         if (RESULT_OK == resultCode) {
             switch (requestCode) {
                 case 0:
+
                     startCityName = data.getStringExtra("cityName");
                     startPlaceName = data.getStringExtra("address");
                     if ("我的位置".equals(startCityName)) {
@@ -558,6 +572,7 @@ public class RoutePlanActiviy extends AppCompatActivity implements OnGetRoutePla
                     break;
             }
         }
+
     }
 
     @Override

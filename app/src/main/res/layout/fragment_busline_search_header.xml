@@ -8,11 +8,10 @@
 
     <Spinner
         android:id="@+id/sp_province"
-        android:layout_width="wrap_content"
+        android:layout_width="110dp"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
         android:dropDownVerticalOffset="45dp"
-        android:popupBackground="#900f"
+        android:popupBackground="@color/colorPrimary"
         android:spinnerMode="dropdown"/>
 
     <TextView
@@ -25,11 +24,10 @@
 
     <Spinner
         android:id="@+id/sp_city"
-        android:layout_width="wrap_content"
+        android:layout_width="110dp"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
         android:dropDownVerticalOffset="45dp"
-        android:popupBackground="#900f"
+        android:popupBackground="@color/colorPrimary"
         android:spinnerMode="dropdown"/>
 
     <TextView

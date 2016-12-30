@@ -10,8 +10,11 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
+import android.widget.ListView;
+import android.widget.TextView;
 
 import java.util.List;
 
@@ -23,8 +26,9 @@ import mchenys.net.csdn.blog.coolweather.R;
  */
 public class HaveFunSearchFragment extends Fragment {
     private AutoCompleteTextView keyWorldsView = null;
-    private ArrayAdapter<String> sugAdapter = null;
     private PoiSearchActivity mParent;
+    private ListView mCityNameLv;
+    private TextView mCityListTv;
 
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -35,8 +39,9 @@ public class HaveFunSearchFragment extends Fragment {
     public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
         mParent = (PoiSearchActivity) getActivity();
         keyWorldsView = (AutoCompleteTextView) view.findViewById(R.id.searchkey);
-        sugAdapter = new ArrayAdapter<String>(getActivity(), android.R.layout.simple_dropdown_item_1line);
-        keyWorldsView.setAdapter(sugAdapter);
+        mCityNameLv = (ListView) view.findViewById(R.id.lv_city);
+        mCityListTv = (TextView) view.findViewById(R.id.tv_city_list);
+        mCityListTv.setVisibility(View.GONE);
         keyWorldsView.setThreshold(1);
 
         keyWorldsView.addTextChangedListener(new TextWatcher() {
@@ -54,11 +59,9 @@ public class HaveFunSearchFragment extends Fragment {
                 if (cs.length() <= 0) {
                     return;
                 }
-                /**
-                 * 使用建议搜索服务获取建议列表，结果在onSuggestionResult()中更新
-                 */
+                mCityListTv.setVisibility(View.GONE);
+                //使用建议搜索服务获取建议列表，结果在onSuggestionResult()中更新
                 mParent.requestSuggestion(cs.toString());
-
             }
         });
 
@@ -86,9 +89,35 @@ public class HaveFunSearchFragment extends Fragment {
         return keyWorldsView.getText().toString().trim();
     }
 
+    /**
+     * 显示建议信息
+     *
+     * @param list
+     */
     public void showSuggestList(List<String> list) {
-        sugAdapter = new ArrayAdapter<String>(getActivity(), android.R.layout.simple_dropdown_item_1line, list);
+        ArrayAdapter sugAdapter = new ArrayAdapter<>(getActivity(), android.R.layout.simple_dropdown_item_1line, list);
         keyWorldsView.setAdapter(sugAdapter);
         sugAdapter.notifyDataSetChanged();
     }
+
+    /**
+     * 显示匹配结果的城市名称
+     *
+     * @param cityList
+     */
+    public void showFindedCityList(List<String> cityList) {
+        if (null != cityList && cityList.size() > 0) {
+            mCityListTv.setVisibility(View.VISIBLE);
+            ArrayAdapter cityAdapter = new ArrayAdapter<String>(getActivity(), android.R.layout.simple_dropdown_item_1line, cityList);
+            mCityNameLv.setAdapter(cityAdapter);
+            mCityNameLv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                    String cityName = (String) parent.getItemAtPosition(position);
+                    mParent.searchPoiByCityName(cityName);
+                }
+            });
+        }
+    }
+
 }

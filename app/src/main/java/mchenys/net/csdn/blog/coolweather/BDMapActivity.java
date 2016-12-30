@@ -43,6 +43,7 @@ import com.baidu.mapapi.map.MyLocationConfiguration;
 import com.baidu.mapapi.map.MyLocationData;
 import com.baidu.mapapi.model.LatLng;
 import com.baidu.mapapi.search.busline.BusLineResult;
+import com.baidu.mapapi.search.core.PoiInfo;
 import com.baidu.mapapi.search.core.RouteLine;
 import com.baidu.mapapi.search.core.RouteNode;
 import com.baidu.mapapi.search.core.RouteStep;
@@ -52,7 +53,12 @@ import com.baidu.mapapi.search.geocode.GeoCoder;
 import com.baidu.mapapi.search.geocode.OnGetGeoCoderResultListener;
 import com.baidu.mapapi.search.geocode.ReverseGeoCodeOption;
 import com.baidu.mapapi.search.geocode.ReverseGeoCodeResult;
+import com.baidu.mapapi.search.poi.OnGetPoiSearchResultListener;
+import com.baidu.mapapi.search.poi.PoiDetailResult;
+import com.baidu.mapapi.search.poi.PoiDetailSearchOption;
+import com.baidu.mapapi.search.poi.PoiIndoorResult;
 import com.baidu.mapapi.search.poi.PoiResult;
+import com.baidu.mapapi.search.poi.PoiSearch;
 import com.baidu.mapapi.search.route.BikingRouteLine;
 import com.baidu.mapapi.search.route.DrivingRouteLine;
 import com.baidu.mapapi.search.route.MassTransitRouteLine;
@@ -79,7 +85,7 @@ import mchenys.net.csdn.blog.coolweather.mapapi.overlayutil.WalkingRouteOverlay;
 /**
  * Created by mChenys on 2016/12/24.
  */
-public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderResultListener {
+public class BDMapActivity extends AppCompatActivity {
     private static final String TAG = "BDMapActivity";
     private static final int REQ_SEARCH_BUSLINE = 200;
     private static final int REQ_SEARCH_ROUTE = 100;
@@ -105,10 +111,12 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
     private BaiduMap mBaiduMap;
     private GeoCoder mGeoCoder;
     private BusLineResult mBusLineResult;
+    private PoiSearch mPoiSearch;
 
     private LatLng mStartLatLng, mEndLatLng;
-    private int nowSearchType;
+    private int nowSearchType = -1;
     private boolean isOpenLocation;//是否开启自动定位
+    private ArrayList<? extends RouteLine> mCurrRouteLineList;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -159,6 +167,7 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
             mRouteIb.setVisibility(View.VISIBLE);
             mTitleBarLl.setVisibility(View.VISIBLE);
             mModeLayout.setVisibility(View.VISIBLE);
+            mBaiduMap.clear();
             //隐藏节点详情
             mStepLayout.setVisibility(View.GONE);
             mStepBackIv.setVisibility(View.GONE);
@@ -189,7 +198,8 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
 
         // 初始化地理编码功能
         mGeoCoder = GeoCoder.newInstance();
-        mGeoCoder.setOnGetGeoCodeResultListener(this);
+        // 初始化搜索模块，注册搜索事件监听
+        mPoiSearch = PoiSearch.newInstance();
 
     }
 
@@ -208,19 +218,22 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
                 return false;
             }
         });
+
         //点击marker弹出显示位置
         mBaiduMap.setOnMarkerClickListener(new BaiduMap.OnMarkerClickListener() {
             @Override
             public boolean onMarkerClick(Marker marker) {
                 LatLng ll = marker.getPosition();
                 if (null != mBusLineResult) {
+                    //显示公交站poi
                     for (RouteNode routeNode : mBusLineResult.getStations()) {
                         if (routeNode.getLocation() == ll) {
                             showInfoWindow(routeNode.getTitle(), ll);
                             return true;
                         }
                     }
-                } else {
+                } else if (-1 != nowSearchType) {
+                    //通过反编码查询路线规划点击poi
                     mBaiduMap.setMapStatus(MapStatusUpdateFactory.newLatLng(ll));
                     mGeoCoder.reverseGeoCode(new ReverseGeoCodeOption().location(ll));
                 }
@@ -236,6 +249,44 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
                 isOpenLocation = false;
             }
         });
+        //地理编码解析与反解析
+        mGeoCoder.setOnGetGeoCodeResultListener(new OnGetGeoCoderResultListener() {
+            @Override
+            public void onGetGeoCodeResult(GeoCodeResult geoCodeResult) {
+
+            }
+
+            @Override
+            public void onGetReverseGeoCodeResult(ReverseGeoCodeResult result) {
+                if (result != null && result.error == SearchResult.ERRORNO.NO_ERROR) {
+                    showInfoWindow(result.getAddress(), result.getLocation());
+                }
+
+            }
+        });
+        //主要用到详情搜索
+        mPoiSearch.setOnGetPoiSearchResultListener(new OnGetPoiSearchResultListener() {
+            @Override
+            public void onGetPoiResult(PoiResult poiResult) {
+
+            }
+
+            @Override
+            public void onGetPoiDetailResult(PoiDetailResult result) {
+                if (result.error != SearchResult.ERRORNO.NO_ERROR) {
+                    Toast.makeText(BDMapActivity.this, "抱歉，未找到结果", Toast.LENGTH_SHORT).show();
+                } else {
+                    //显示搜索到的poi详情
+                    showInfoWindow(result.getName() + " " + result.getAddress(), result.getLocation());
+                }
+            }
+
+            @Override
+            public void onGetPoiIndoorResult(PoiIndoorResult poiIndoorResult) {
+
+            }
+        });
+
         //点击当前位置切换为跟随模式
         mNoModeIv.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -251,10 +302,13 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
         mStepBackIv.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                Log.d(TAG, "#BDMapActivity-mStepBackIv->startCityName:" + startCityName + " startPlaceName:" + startPlaceName +" mStartLatLng:"+mStartLatLng+" mEndLatLng:"+mEndLatLng);
+
                 mBaiduMap.clear();//清除路况
                 //返回路线选择页
                 Intent intent = new Intent(BDMapActivity.this, RoutePlanActiviy.class);
                 intent.putExtra("startLatlng", mStartLatLng);
+                intent.putParcelableArrayListExtra("routeLineList", mCurrRouteLineList);
                 intent.putExtra("endLatlng", mEndLatLng);
                 intent.putExtra("cityName", startCityName);
                 intent.putExtra("nowSearchType", nowSearchType);
@@ -286,6 +340,7 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
                 intent.putExtra("endLatlng", mStartLatLng);
                 intent.putExtra("cityName", startCityName);
                 intent.putExtra("nowSearchType", nowSearchType);
+                intent.putExtra("isAutoSearch", false);
                 startActivityForResult(intent, REQ_SEARCH_ROUTE, null);
             }
         });
@@ -459,6 +514,8 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
                     .direction(100).latitude(location.getLatitude())
                     .longitude(location.getLongitude()).build();
             mBaiduMap.setMyLocationData(locData);
+            mStartLatLng = new LatLng(location.getLatitude(), location.getLongitude());
+            startCityName = location.getCity();
         }
         if (isOpenLocation) {
             //实时跟随定位
@@ -470,8 +527,7 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
             mBaiduMap.setMyLocationData(locData);
         }
         Log.d(TAG, isOpenLocation ? "开启自动定位" : "关闭自动定位");
-        mStartLatLng = new LatLng(location.getLatitude(), location.getLongitude());
-        startCityName = location.getCity();
+
 //        startPlaceName = location.getDistrict() + location.getStreet();
     }
 
@@ -518,41 +574,6 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
         super.onDestroy();
     }
 
-    // 设置个性化地图config文件路径
-    private void setMapCustomFile(Context context) {
-        FileOutputStream out = null;
-        InputStream inputStream = null;
-        String moduleName = null;
-        try {
-            inputStream = context.getAssets().open("customConfigdir/custom_config.txt");
-            byte[] b = new byte[inputStream.available()];
-            inputStream.read(b);
-
-            moduleName = context.getFilesDir().getAbsolutePath();
-            File f = new File(moduleName + "/" + "custom_config.txt");
-            if (f.exists()) {
-                f.delete();
-            }
-            f.createNewFile();
-            out = new FileOutputStream(f);
-            out.write(b);
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                if (inputStream != null) {
-                    inputStream.close();
-                }
-                if (out != null) {
-                    out.close();
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
-        MapView.setCustomMapStylePath(moduleName + "/custom_config.txt");
-    }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -561,12 +582,15 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
                 int linePosition = data.getIntExtra("linePosition", 1);
                 boolean isSameCity = data.getBooleanExtra("isSameCity", false);//是否是同城,跨域交通用到
                 RouteLine routeLine = data.getParcelableExtra("routeLine");
+                mCurrRouteLineList = data.getParcelableArrayListExtra("routeLineList");
                 nowSearchType = data.getIntExtra("nowSearchType", -1);
                 mStartLatLng = data.getParcelableExtra("startLatlng");
                 mEndLatLng = data.getParcelableExtra("endLatlng");
                 startCityName = data.getStringExtra("startCityName");
                 mStartNodeName = data.getStringExtra("startNodeName");
                 mEndNodeName = data.getStringExtra("endNodeName");
+                Log.d(TAG, "#BDMapActivity-onActivityResult->startCityName:" + startCityName + " startPlaceName:" + startPlaceName +" mStartLatLng:"+mStartLatLng+" mEndLatLng:"+mEndLatLng);
+
                 if (null == routeLine || -1 == nowSearchType) {
                     Toast.makeText(BDMapActivity.this, "获取路线失败", Toast.LENGTH_SHORT).show();
                     return;
@@ -632,7 +656,7 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
                 } else if (type == PoiSearchActivity.TYPE_HAVE_FUN) {
                     PoiResult result = data.getParcelableExtra("poiResult");
                     mBaiduMap.clear();
-                    PoiOverlay overlay = new PoiOverlay(mBaiduMap);
+                    PoiOverlay overlay = new MyPoiOverlay(mBaiduMap);
                     mBaiduMap.setOnMarkerClickListener(overlay);
                     overlay.setData(result);
                     overlay.addToMap();
@@ -752,17 +776,20 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
         });
     }
 
-    @Override
-    public void onGetGeoCodeResult(GeoCodeResult geoCodeResult) {
 
-    }
+    private class MyPoiOverlay extends PoiOverlay {
 
-    @Override
-    public void onGetReverseGeoCodeResult(ReverseGeoCodeResult result) {
-        if (result != null && result.error == SearchResult.ERRORNO.NO_ERROR) {
-            showInfoWindow(result.getAddress(), result.getLocation());
+        public MyPoiOverlay(BaiduMap baiduMap) {
+            super(baiduMap);
         }
 
+        @Override
+        public boolean onPoiClick(int index) {
+            super.onPoiClick(index);
+            PoiInfo poi = getPoiResult().getAllPoi().get(index);
+            mPoiSearch.searchPoiDetail((new PoiDetailSearchOption()).poiUid(poi.uid));
+            return true;
+        }
     }
 
     // show popup
@@ -783,5 +810,41 @@ public class BDMapActivity extends AppCompatActivity implements OnGetGeoCoderRes
             return;
         }
         super.onBackPressed();
+    }
+
+    // 设置个性化地图config文件路径
+    private void setMapCustomFile(Context context) {
+        FileOutputStream out = null;
+        InputStream inputStream = null;
+        String moduleName = null;
+        try {
+            inputStream = context.getAssets().open("customConfigdir/custom_config.txt");
+            byte[] b = new byte[inputStream.available()];
+            inputStream.read(b);
+
+            moduleName = context.getFilesDir().getAbsolutePath();
+            File f = new File(moduleName + "/" + "custom_config.txt");
+            if (f.exists()) {
+                f.delete();
+            }
+            f.createNewFile();
+            out = new FileOutputStream(f);
+            out.write(b);
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (inputStream != null) {
+                    inputStream.close();
+                }
+                if (out != null) {
+                    out.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        MapView.setCustomMapStylePath(moduleName + "/custom_config.txt");
     }
 }

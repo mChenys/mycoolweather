@@ -11,7 +11,6 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
 import android.view.View;
-import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RadioGroup;
@@ -59,7 +58,6 @@ public class PoiSearchActivity extends AppCompatActivity {
     private TextView mShowMapTv;
     private List<BusLineResult.BusStation> mBusStations = new ArrayList<>();
     private BusStationAdapter mStationAdapter;
-    private FrameLayout mContentFl;
     private RadioGroup mPoiSwitchRg;
     public static final int TYPE_BUS_LINE = 0;
     public static final int TYPE_HAVE_FUN = 1;
@@ -77,7 +75,7 @@ public class PoiSearchActivity extends AppCompatActivity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_bus_search);
+        setContentView(R.layout.activity_poi_search);
         initSearch();
         initView();
         initListener();
@@ -98,7 +96,6 @@ public class PoiSearchActivity extends AppCompatActivity {
         mSwitchIv = (ImageView) findViewById(R.id.iv_switch_bus);
         mNextLineTv = (TextView) findViewById(R.id.tv_next);
         mShowMapTv = (TextView) findViewById(R.id.tv_show_map);
-        mContentFl = (FrameLayout) findViewById(R.id.fl_content);
         mPoiSwitchRg = (RadioGroup) findViewById(R.id.rg_switch_poi);
 
         mFragmentList.add(new BusLineSearchFragment());
@@ -106,6 +103,7 @@ public class PoiSearchActivity extends AppCompatActivity {
     }
 
     private void initSearch() {
+        //poi搜索,公交线搜索初始化
         mPoiSearch = PoiSearch.newInstance();
         mBusLineSearch = BusLineSearch.newInstance();
 
@@ -125,7 +123,7 @@ public class PoiSearchActivity extends AppCompatActivity {
                 finish();
             }
         });
-
+        //切换搜索头
         mPoiSwitchRg.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
             @Override
             public void onCheckedChanged(RadioGroup group, int checkedId) {
@@ -140,10 +138,11 @@ public class PoiSearchActivity extends AppCompatActivity {
                 switchPoiSearch(mType);
             }
         });
-
+        //搜索公交站或者其他poi
         mSearchTv.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                showProgressDialog();
                 if (mBusStations.isEmpty()) {
                     mRightSettingLayout.setVisibility(View.GONE);
                 }
@@ -154,7 +153,7 @@ public class PoiSearchActivity extends AppCompatActivity {
                         return;
                     }
                     String cityName = getBusSearchFragment().getCityName();
-                    showProgressDialog();
+
                     // 发起poi检索，从得到所有poi中找到公交线路类型的poi，再使用该poi的uid进行公交详情搜索
                     mPoiSearch.searchInCity(new PoiCitySearchOption().city(cityName).keyword(busLine));
                 } else if (mType == TYPE_HAVE_FUN) {
@@ -169,7 +168,7 @@ public class PoiSearchActivity extends AppCompatActivity {
 
             }
         });
-
+        //倒序显示公交站
         mSwitchIv.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -177,6 +176,7 @@ public class PoiSearchActivity extends AppCompatActivity {
                 mStationAdapter.notifyDataSetChanged();
             }
         });
+        //查询下一条公交站
         mNextLineTv.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -184,6 +184,7 @@ public class PoiSearchActivity extends AppCompatActivity {
                 searchBusLine();
             }
         });
+        //显示公交站到地图上
         mShowMapTv.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -209,19 +210,20 @@ public class PoiSearchActivity extends AppCompatActivity {
         } else if (type == TYPE_HAVE_FUN) {
             mPoiSwitchRg.check(R.id.rb_have_fun);
             mRecyclerView.setVisibility(View.GONE);
+            mRightSettingLayout.setVisibility(View.GONE);
         }
     }
 
     private OnGetPoiSearchResultListener poiListener = new OnGetPoiSearchResultListener() {
 
         public void onGetPoiResult(PoiResult result) {
-            //获取POI检索结果
-            if (result == null || result.error != SearchResult.ERRORNO.NO_ERROR) {
-                closeProgressDialog();
-                Toast.makeText(PoiSearchActivity.this, "抱歉，未找到结果", Toast.LENGTH_LONG).show();
-                return;
-            }
             if (mType == TYPE_BUS_LINE) {
+                //获取POI检索结果
+                if (result == null || result.error != SearchResult.ERRORNO.NO_ERROR) {
+                    closeProgressDialog();
+                    Toast.makeText(PoiSearchActivity.this, "抱歉，未找到结果", Toast.LENGTH_LONG).show();
+                    return;
+                }
                 // 遍历所有poi，找到类型为公交线路的poi
                 busLineIDList.clear();
                 for (PoiInfo poi : result.getAllPoi()) {
@@ -234,32 +236,29 @@ public class PoiSearchActivity extends AppCompatActivity {
                     searchBusLine();
                 }
             } else if (mType == TYPE_HAVE_FUN) {
+                closeProgressDialog();
                 if (result.error == SearchResult.ERRORNO.NO_ERROR) {
                     Intent intent = getIntent();
                     intent.putExtra("type", mType);
                     intent.putExtra("poiResult", result);
                     setResult(RESULT_OK, intent);
+                    finish();
                     return;
                 }
                 if (result.error == SearchResult.ERRORNO.AMBIGUOUS_KEYWORD) {
                     // 当输入关键字在本市没有找到，但在其他城市找到时，返回包含该关键字信息的城市列表
-                    String strInfo = "在";
+                    List<String> cityList = new ArrayList<>();
                     for (CityInfo cityInfo : result.getSuggestCityList()) {
-                        strInfo += cityInfo.city;
-                        strInfo += ",";
+                        cityList.add(cityInfo.city);
                     }
-                    strInfo += "找到结果";
-                    Toast.makeText(PoiSearchActivity.this, strInfo, Toast.LENGTH_LONG).show();
+                    //显示城市列表
+                    getFunSearchFragment().showFindedCityList(cityList);
                 }
             }
         }
 
         public void onGetPoiDetailResult(PoiDetailResult result) {
-            if (result.error != SearchResult.ERRORNO.NO_ERROR) {
-                Toast.makeText(PoiSearchActivity.this, "抱歉，未找到结果", Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(PoiSearchActivity.this, result.getName() + ": " + result.getAddress(), Toast.LENGTH_SHORT).show();
-            }
+
         }
 
         @Override
@@ -269,8 +268,7 @@ public class PoiSearchActivity extends AppCompatActivity {
 
     //搜索公交
     private void searchBusLine() {
-        BusLineSearchFragment fragment = (BusLineSearchFragment) mFragmentList.get(mType);
-        String cityName = fragment.getCityName();
+        String cityName = getBusSearchFragment().getCityName();
         if (busLineIndex >= busLineIDList.size()) {
             busLineIndex = 0;
         }
@@ -306,11 +304,21 @@ public class PoiSearchActivity extends AppCompatActivity {
         mSuggestionSearch.requestSuggestion((new SuggestionSearchOption()).keyword(key).city(""));
     }
 
+    //根据城市名再次poi搜索
+    public void searchPoiByCityName(String cityName) {
+        showProgressDialog();
+        String keystr = getFunSearchFragment().getKeyword();
+        if (TextUtils.isEmpty(keystr)) {
+            Toast.makeText(PoiSearchActivity.this, "请输入搜索关键字", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        mPoiSearch.searchInCity((new PoiCitySearchOption()).city(cityName).keyword(keystr).pageNum(0));
+    }
     //建议查询结果
     private OnGetSuggestionResultListener suggestListener = new OnGetSuggestionResultListener() {
         /**
          * 获取在线建议搜索结果，得到requestSuggestion返回的搜索结果
-         *
          * @param res
          */
         @Override
@@ -330,11 +338,11 @@ public class PoiSearchActivity extends AppCompatActivity {
         }
     };
 
-    public HaveFunSearchFragment getFunSearchFragment() {
+    private HaveFunSearchFragment getFunSearchFragment() {
         return (HaveFunSearchFragment) mFragmentList.get(1);
     }
 
-    public BusLineSearchFragment getBusSearchFragment() {
+    private BusLineSearchFragment getBusSearchFragment() {
        return  (BusLineSearchFragment) mFragmentList.get(0);
     }
 
